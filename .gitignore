@@ -1,20 +1,31 @@
-# Terraform files
+# Terraform
 *.tfstate
 *.tfstate.*
 *.tfvars
-!*.tfvars.example
+!terraform.tfvars.example
 .terraform/
 .terraform.lock.hcl
+crash.log
+crash.*.log
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
+
+# Lambda packages
+modules/api/lambda_package/
+modules/api/authorizer.zip
+
+# Temporary files
+*.tmp
+*.temp

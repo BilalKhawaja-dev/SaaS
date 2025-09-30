@@ -106,6 +106,7 @@ module "compute" {
   ecs_execution_role_arn = module.security.ecs_execution_role_arn
   ecs_instance_profile_name = module.security.ecs_instance_profile_name
   log_group_name        = module.monitoring.app_log_group_name
+  sns_topic_arn         = module.notifications.sns_topic_arn
   tags                  = var.tags
 }
 
@@ -127,4 +128,14 @@ module "notifications" {
   ecs_service_name   = "${var.project_name}-frontend"
   ecs_cluster_name   = module.compute.ecs_cluster_name
   tags              = var.tags
+}
+
+# CI/CD Module
+module "cicd" {
+  source = "./modules/cicd"
+
+  project_name         = var.project_name
+  source_bucket_name   = module.storage.assets_bucket_name
+  artifacts_bucket_name = module.storage.logs_bucket_name
+  tags                = var.tags
 }

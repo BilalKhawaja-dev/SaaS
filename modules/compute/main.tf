@@ -39,8 +39,12 @@ resource "aws_autoscaling_group" "ecs" {
   name                = "${var.project_name}-ecs-asg"
   vpc_zone_identifier = [var.private_subnet_id]
   min_size            = 1
-  max_size            = 3
+  max_size            = 5
   desired_capacity    = 1
+  
+  target_group_arns = [aws_lb_target_group.app.arn]
+  health_check_type = "ELB"
+  health_check_grace_period = 300
 
   launch_template {
     id      = aws_launch_template.ecs.id
@@ -61,6 +65,64 @@ resource "aws_autoscaling_group" "ecs" {
       propagate_at_launch = true
     }
   }
+}
+
+# Auto Scaling Policy - Scale Up
+resource "aws_autoscaling_policy" "scale_up" {
+  name                   = "${var.project_name}-scale-up"
+  scaling_adjustment     = 1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown              = 300
+  autoscaling_group_name = aws_autoscaling_group.ecs.name
+}
+
+# Auto Scaling Policy - Scale Down
+resource "aws_autoscaling_policy" "scale_down" {
+  name                   = "${var.project_name}-scale-down"
+  scaling_adjustment     = -1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown              = 300
+  autoscaling_group_name = aws_autoscaling_group.ecs.name
+}
+
+# CloudWatch Alarm - High CPU
+resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  alarm_name          = "${var.project_name}-cpu-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "90"
+  alarm_description   = "This metric monitors ec2 cpu utilization"
+  alarm_actions       = [aws_autoscaling_policy.scale_up.arn, var.sns_topic_arn]
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.ecs.name
+  }
+
+  tags = var.tags
+}
+
+# CloudWatch Alarm - Low CPU
+resource "aws_cloudwatch_metric_alarm" "cpu_low" {
+  alarm_name          = "${var.project_name}-cpu-low"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "20"
+  alarm_description   = "This metric monitors ec2 cpu utilization"
+  alarm_actions       = [aws_autoscaling_policy.scale_down.arn]
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.ecs.name
+  }
+
+  tags = var.tags
 }
 
 # Application Load Balancer

@@ -1,11 +1,21 @@
 output "rds_endpoint" {
-  description = "RDS instance endpoint"
-  value       = aws_db_instance.main.endpoint
+  description = "RDS Proxy endpoint"
+  value       = aws_db_proxy.main.endpoint
 }
 
 output "rds_port" {
-  description = "RDS instance port"
-  value       = aws_db_instance.main.port
+  description = "RDS port"
+  value       = 5432
+}
+
+output "aurora_cluster_endpoint" {
+  description = "Aurora cluster endpoint"
+  value       = aws_rds_cluster.main.endpoint
+}
+
+output "aurora_reader_endpoint" {
+  description = "Aurora reader endpoint"
+  value       = aws_rds_cluster.main.reader_endpoint
 }
 
 output "support_tickets_table_name" {
@@ -19,6 +29,11 @@ output "user_sessions_table_name" {
 }
 
 output "rds_instance_id" {
-  description = "RDS instance identifier"
-  value       = aws_db_instance.main.identifier
+  description = "Aurora cluster identifier"
+  value       = aws_rds_cluster.main.cluster_identifier
+}
+
+output "dax_cluster_endpoint" {
+  description = "DAX cluster endpoint"
+  value       = aws_dax_cluster.main.cluster_address
 }

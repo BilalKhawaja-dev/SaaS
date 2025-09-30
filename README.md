@@ -25,10 +25,15 @@ This Terraform project implements a cost-optimized multi-tenant SaaS platform fo
 - Single AZ deployment in eu-west-2a
 - Basic tenant isolation (logical only)
 - Minimal resource sizing
-- Single RDS instance (not Aurora)
-- Valkey 8.0 cache (not Redis)
+- **Aurora Serverless v2** with RDS Proxy
+- **DAX** for DynamoDB acceleration
+- **Valkey 8.0** cache (not Redis)
+- **S3 with Macie** for data classification
+- **Athena** for analytics queries
+- **Auto-scaling** (90% CPU threshold)
+- **CloudWatch Dashboard** with comprehensive metrics
+- **CodeBuild CI/CD** pipeline with S3 backend
 - Email notifications to bilalkwj@amazon.com
-- Basic monitoring
 
 ### Authentication Flow
 ```
@@ -46,8 +51,13 @@ For production deployment, consider:
 - **Custom domain with ACM certificate** for HTTPS
 - **Route 53** for DNS management
 - **CloudFront** for global content delivery
+- **Aurora read replicas** for read scaling
+- **Multi-AZ deployment** for high availability
 - **2FA/MFA** for enhanced security
 - **SSO integration** (SAML, OIDC) with Cognito Identity Providers
+- **Amazon Bedrock** integration for AI-powered analytics (cost consideration)
+- **WAF** for application security
+- **Enhanced monitoring** with X-Ray tracing
 - Multi-AZ deployment across eu-west-2a, eu-west-2b, eu-west-2c
 - Aurora with read replicas
 - Enhanced tenant isolation with placement groups
@@ -63,11 +73,15 @@ For production deployment, consider:
 - **Database**: RDS PostgreSQL for relational data, DynamoDB for unstructured data
 - **Authentication**: Cognito User Pool
 - **API**: API Gateway with Lambda authorizer
-- **Caching**: ElastiCache Valkey 8.0
-- **Storage**: S3 buckets for logs and static content
-- **Monitoring**: CloudWatch with email notifications
+- **Database**: Aurora Serverless v2 with RDS Proxy
+- **Caching**: ElastiCache Valkey 8.0 + DAX for DynamoDB
+- **Storage**: S3 buckets with Macie classification
+- **Analytics**: Athena for querying S3 data lake
+- **Monitoring**: CloudWatch Dashboard with comprehensive metrics
+- **Auto-scaling**: EC2 Auto Scaling (90% CPU trigger)
 - **Notifications**: SNS topic with email alerts
-- **Security**: IAM roles, Secrets Manager
+- **CI/CD**: CodeBuild pipeline with S3 backend
+- **Security**: IAM roles, Secrets Manager, Macie
 
 ## Module Structure
 
@@ -196,6 +210,35 @@ Email notifications are sent to `bilalkwj@amazon.com` for:
 - ECS service task count < 1 (service down)
 
 **Note**: You'll need to confirm the SNS email subscription after deployment.
+
+## Auto-Scaling
+
+- **Trigger**: 90% CPU utilization for 2 consecutive periods (5 minutes each)
+- **Scale Up**: Add 1 instance when CPU > 90%
+- **Scale Down**: Remove 1 instance when CPU < 20%
+- **Min Instances**: 1
+- **Max Instances**: 5
+
+## CloudWatch Dashboard
+
+Comprehensive monitoring dashboard includes:
+- ECS Service CPU/Memory utilization
+- Aurora cluster metrics (CPU, connections)
+- Application Load Balancer metrics (requests, response time)
+- Auto Scaling Group CPU utilization
+
+## CI/CD Pipeline
+
+### CodeBuild Setup:
+1. **Source**: Upload code to S3 bucket
+2. **Build**: Terraform plan/apply via CodeBuild
+3. **State**: Stored in S3 with DynamoDB locking
+4. **Artifacts**: Build outputs stored in S3
+
+### Pipeline Stages:
+1. **Source** → Fetch from S3
+2. **Plan** → Terraform plan
+3. **Apply** → Terraform apply (manual approval recommended for prod)
 
 ## Cleanup
 

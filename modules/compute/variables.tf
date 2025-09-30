@@ -53,6 +53,11 @@ variable "log_group_name" {
   type        = string
 }
 
+variable "sns_topic_arn" {
+  description = "SNS topic ARN for notifications"
+  type        = string
+}
+
 variable "tags" {
   description = "Common tags"
   type        = map(string)
