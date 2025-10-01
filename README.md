@@ -4,11 +4,12 @@
 
 This Terraform project implements a cost-optimized multi-tenant SaaS platform for testing purposes, deployed in EU-West-2.
 
-### Domain & SSL Workaround
-**No domain or ACM certificate required!** 
-- Uses Application Load Balancer with HTTP (port 80)
-- Access via ALB DNS name (e.g., `saas-platform-alb-123456789.eu-west-2.elb.amazonaws.com`)
-- API Gateway provides additional endpoint for API access
+### Architecture & Access
+**API Gateway-First Architecture** 
+- **No ALB** - Applications exposed via API Gateway only
+- **No SSL termination** - API Gateway handles HTTPS
+- **VPC Link** connects API Gateway to private ECS services
+- Access via API Gateway URL (e.g., `https://abc123.execute-api.eu-west-2.amazonaws.com/dev`)
 
 ### Authentication
 - **Amazon Cognito User Pool** with hosted UI
@@ -22,17 +23,17 @@ This Terraform project implements a cost-optimized multi-tenant SaaS platform fo
 - **JWT tokens** with group claims for fine-grained access control
 
 ### Current Implementation (Cost-Optimized for Testing)
-- Single AZ deployment in eu-west-2a
-- Basic tenant isolation (logical only)
-- Minimal resource sizing
-- **Aurora Serverless v2** with RDS Proxy
+- **Single AZ deployment** in eu-west-2a (cost optimization)
+- **Aurora Serverless v2** with RDS Proxy (eliminates single point of failure)
 - **DAX** for DynamoDB acceleration
 - **Valkey 8.0** cache (not Redis)
 - **S3 with Macie** for data classification
 - **Athena** for analytics queries
 - **Auto-scaling** (90% CPU threshold)
-- **CloudWatch Dashboard** with comprehensive metrics
-- **CodeBuild CI/CD** pipeline with S3 backend
+- **WAF** with AWS managed rules (free tier)
+- **CloudTrail & Config** with CloudWatch Logs
+- **Enterprise CloudWatch Dashboard**
+- **CodeBuild CI/CD** with blue-green deployment capability
 - Email notifications to bilalkwj@amazon.com
 
 ### Authentication Flow
@@ -46,18 +47,33 @@ User → Cognito Hosted UI → JWT Token → API Gateway → Lambda Authorizer �
 4. **Admin users** → Full access to all endpoints
 5. **User/Readonly** → Only GET requests allowed
 
+### Architecture Decoupling (Eliminates Single Points of Failure)
+- **Aurora Serverless v2** auto-scales compute (0.5-1 ACU)
+- **RDS Proxy** handles connection pooling and failover
+- **API Gateway** provides managed endpoint (no ALB needed)
+- **ECS Auto Scaling** responds to 90% CPU threshold
+- **Multiple ECS services** (auth, balance, support) for service isolation
+- **DAX** provides microsecond DynamoDB latency with built-in failover
+
+### Backup & Disaster Recovery (Production Recommendations)
+- **Aurora automated backups** (7-day retention configured)
+- **Point-in-time recovery** available for Aurora
+- **S3 versioning** enabled for all buckets
+- **Cross-region replication** for critical S3 buckets
+- **Database snapshots** before major deployments
+- **Infrastructure as Code** enables rapid environment recreation
+
 ### Production Considerations (Not Implemented)
 For production deployment, consider:
-- **Custom domain with ACM certificate** for HTTPS
-- **Route 53** for DNS management
-- **CloudFront** for global content delivery
-- **Aurora read replicas** for read scaling
-- **Multi-AZ deployment** for high availability
+- **Multi-AZ deployment** across eu-west-2a, eu-west-2b, eu-west-2c
+- **Aurora read replicas** for read scaling and regional failover
+- **Custom domain with ACM certificate** for branded API endpoints
+- **Route 53** for DNS management and health checks
+- **CloudFront** for global content delivery and DDoS protection
 - **2FA/MFA** for enhanced security
 - **SSO integration** (SAML, OIDC) with Cognito Identity Providers
 - **Amazon Bedrock** integration for AI-powered analytics (cost consideration)
-- **WAF** for application security
-- **Enhanced monitoring** with X-Ray tracing
+- **Enhanced monitoring** with X-Ray tracing and custom metrics
 - Multi-AZ deployment across eu-west-2a, eu-west-2b, eu-west-2c
 - Aurora with read replicas
 - Enhanced tenant isolation with placement groups
@@ -219,13 +235,17 @@ Email notifications are sent to `bilalkwj@amazon.com` for:
 - **Min Instances**: 1
 - **Max Instances**: 5
 
-## CloudWatch Dashboard
+## Enterprise CloudWatch Dashboard
 
-Comprehensive monitoring dashboard includes:
-- ECS Service CPU/Memory utilization
-- Aurora cluster metrics (CPU, connections)
-- Application Load Balancer metrics (requests, response time)
-- Auto Scaling Group CPU utilization
+**Holistic multi-service monitoring** (simulates 6-account enterprise setup):
+- **API Gateway**: Request count, latency, 4XX/5XX errors
+- **Application Services**: ECS CPU/Memory, running tasks
+- **Database**: Aurora CPU, connections, read/write latency
+- **Infrastructure**: Auto Scaling metrics, desired capacity
+- **Authentication**: Lambda authorizer duration, invocations
+- **Security**: WAF allowed/blocked requests
+- **Caching**: Valkey & DAX performance metrics
+- **Data Lake**: S3 analytics bucket size and objects
 
 ## CI/CD Pipeline
 
@@ -235,10 +255,16 @@ Comprehensive monitoring dashboard includes:
 3. **State**: Stored in S3 with DynamoDB locking
 4. **Artifacts**: Build outputs stored in S3
 
+### Blue-Green Deployment Support:
+- **CodeBuild** supports environment variables for target environment
+- **ECS services** can be updated with zero-downtime deployments
+- **Aurora Serverless** auto-scales without downtime
+- **API Gateway** stages enable traffic shifting
+
 ### Pipeline Stages:
 1. **Source** → Fetch from S3
-2. **Plan** → Terraform plan
-3. **Apply** → Terraform apply (manual approval recommended for prod)
+2. **Plan** → Terraform plan (validation)
+3. **Apply** → Terraform apply with blue-green capability
 
 ## Cleanup
 

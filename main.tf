@@ -139,3 +139,14 @@ module "cicd" {
   artifacts_bucket_name = module.storage.logs_bucket_name
   tags                = var.tags
 }
+
+# Security Compliance Module
+module "security_compliance" {
+  source = "./modules/security-compliance"
+
+  project_name           = var.project_name
+  api_gateway_stage_arn  = module.api.api_gateway_stage_arn
+  cloudtrail_bucket_name = module.storage.logs_bucket_name
+  config_bucket_name     = module.storage.logs_bucket_name
+  tags                  = var.tags
+}
