@@ -52,7 +52,7 @@ resource "aws_codebuild_project" "terraform" {
 
   artifacts {
     type = "S3"
-    location = "${var.artifacts_bucket_name}/builds"
+    location = var.artifacts_bucket_name
   }
 
   environment {

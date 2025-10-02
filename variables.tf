@@ -43,7 +43,7 @@ variable "private_subnet_cidrs" {
 variable "db_username" {
   description = "Database master username"
   type        = string
-  default     = "admin"
+  default     = "dbadmin"
 }
 
 

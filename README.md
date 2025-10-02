@@ -18,9 +18,9 @@ This Terraform project implements a **cost-optimized multi-tenant SaaS platform*
 - **Custom token attributes** - Tenant ID and company name embedded in JWT tokens
 - **User Groups**: admin (full access), user (read-only), readonly (read-only)
 - **Demo Accounts**:
-  - admin@democorp.com / Admin123! (admin group)
-  - user@testinc.com / User123! (user group) 
-  - readonly@enterpriseltd.com / Readonly123! (readonly group)
+  - admin@democorp.com / AdminDemo123! (admin group)
+  - user@testinc.com / UserDemo123! (user group) 
+  - readonly@enterpriseltd.com / ReadonlyDemo123! (readonly group)
 - **OAuth 2.0 flows** via Cognito Hosted UI with callback support
 - **JWT tokens** with tenant context and group claims for fine-grained access control
 
@@ -267,9 +267,9 @@ modules/
 ## Demo Accounts
 
 After deployment, access the Cognito Hosted UI and use these accounts:
-- **admin@demo.com** / admin123 (Admin - full access)
-- **user@demo.com** / user123 (User - read-only access)
-- **readonly@demo.com** / readonly123 (Read-only access)
+- **admin@democorp.com** / AdminDemo123! (Admin - full access)
+- **user@testinc.com** / UserDemo123! (User - read-only access)
+- **readonly@enterpriseltd.com** / ReadonlyDemo123! (Read-only access)
 
 **Cognito Hosted UI URL**: Available in Terraform outputs after deployment
 

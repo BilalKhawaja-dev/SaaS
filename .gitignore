@@ -22,7 +22,7 @@ Thumbs.db
 # Logs
 *.log
 
-# Lambda packages
+# Lambda packages (build artifacts)
 modules/api/lambda_package/
 modules/api/authorizer.zip
 

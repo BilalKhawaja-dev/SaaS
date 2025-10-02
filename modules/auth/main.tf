@@ -174,7 +174,7 @@ resource "random_password" "readonly_password" {
 resource "aws_cognito_user" "admin_user" {
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "admin@democorp.com"
-  password     = "Admin123!"  # Fixed password for demo
+  password     = "AdminDemo123!"  # Fixed password for demo (12+ chars)
   
   attributes = {
     email                    = "admin@democorp.com"
@@ -189,7 +189,7 @@ resource "aws_cognito_user" "admin_user" {
 resource "aws_cognito_user" "regular_user" {
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "user@testinc.com"
-  password     = "User123!"   # Fixed password for demo
+  password     = "UserDemo123!"   # Fixed password for demo (12+ chars)
   
   attributes = {
     email                    = "user@testinc.com"
@@ -204,7 +204,7 @@ resource "aws_cognito_user" "regular_user" {
 resource "aws_cognito_user" "readonly_user" {
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "readonly@enterpriseltd.com"
-  password     = "Readonly123!"  # Fixed password for demo
+  password     = "ReadonlyDemo123!"  # Fixed password for demo (12+ chars)
   
   attributes = {
     email                    = "readonly@enterpriseltd.com"

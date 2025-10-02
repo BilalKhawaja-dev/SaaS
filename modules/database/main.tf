@@ -301,7 +301,7 @@ resource "aws_iam_role" "dax" {
 
 resource "aws_iam_role_policy_attachment" "dax" {
   role       = aws_iam_role.dax.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonDaxFullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
 }
 
 # Store DAX endpoint in SSM Parameter Store
