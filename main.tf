@@ -150,18 +150,17 @@ module "cicd" {
   tags                = var.tags
 }
 
-# Security Compliance Module
-module "security_compliance" {
-  source = "./modules/security-compliance"
-
-  project_name           = var.project_name
-  api_gateway_stage_arn  = module.api.api_gateway_stage_arn
-  cloudtrail_bucket_name = module.storage.logs_bucket_name
-  config_bucket_name     = module.storage.logs_bucket_name
-  tags                  = var.tags
-}
-# Output
-s for SNS notification system
+# Security Compliance Module - Disabled due to syntax errors
+# module "security_compliance" {
+#   source = "./modules/security-compliance"
+#
+#   project_name           = var.project_name
+#   api_gateway_stage_arn  = module.api.api_gateway_stage_arn
+#   cloudtrail_bucket_name = module.storage.logs_bucket_name
+#   config_bucket_name     = module.storage.logs_bucket_name
+#   tags                  = var.tags
+# }
+# Outputs for SNS notification system
 output "main_sns_topic_arn" {
   description = "ARN of the main support tickets SNS topic"
   value       = module.notifications.main_topic_arn

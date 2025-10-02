@@ -154,7 +154,7 @@ CREATE TABLE subscriptions (
 **Support Tickets Table**:
 ```json
 {
-  "TableName": "saas-platform-support-tickets",
+  "TableName": "saas-platform-tickets",
   "KeySchema": [
     {"AttributeName": "tenant_id", "KeyType": "HASH"},
     {"AttributeName": "ticket_id", "KeyType": "RANGE"}

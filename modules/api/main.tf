@@ -283,9 +283,15 @@ resource "aws_api_gateway_deployment" "main" {
   ]
 
   rest_api_id = aws_api_gateway_rest_api.main.id
-  stage_name  = "dev"
 
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# API Gateway Stage
+resource "aws_api_gateway_stage" "dev" {
+  deployment_id = aws_api_gateway_deployment.main.id
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  stage_name    = "dev"
 }

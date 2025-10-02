@@ -42,17 +42,17 @@ resource "aws_ssm_parameter" "db_name" {
 
 # DB Subnet Group
 resource "aws_db_subnet_group" "main" {
-  name       = "${var.project_name}-db-subnet-group"
+  name       = "${var.project_name}-db-subnets"
   subnet_ids = var.private_subnet_ids # Multi-AZ deployment
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-db-subnet-group"
+    Name = "${var.project_name}-db-subnets"
   })
 }
 
 # Aurora Serverless v2 Cluster
 resource "aws_rds_cluster" "main" {
-  cluster_identifier     = "${var.project_name}-aurora-cluster"
+  cluster_identifier     = "${var.project_name}-aurora"
   engine                = "aurora-postgresql"
   engine_mode           = "provisioned"
   engine_version        = "15.4"
@@ -80,7 +80,7 @@ resource "aws_rds_cluster" "main" {
   }
   
   tags = merge(var.tags, {
-    Name = "${var.project_name}-aurora-cluster"
+    Name = "${var.project_name}-aurora"
   })
 }
 
@@ -88,7 +88,7 @@ resource "aws_rds_cluster" "main" {
 resource "aws_rds_cluster_instance" "main" {
   count = 2  # One instance per AZ
   
-  identifier         = "${var.project_name}-aurora-instance-${count.index + 1}"
+  identifier         = "${var.project_name}-db-${count.index + 1}"
   cluster_identifier = aws_rds_cluster.main.id
   instance_class     = "db.serverless"
   engine            = aws_rds_cluster.main.engine
@@ -96,13 +96,13 @@ resource "aws_rds_cluster_instance" "main" {
   availability_zone  = count.index == 0 ? "eu-west-2a" : "eu-west-2b"
   
   tags = merge(var.tags, {
-    Name = "${var.project_name}-aurora-instance-${count.index + 1}"
+    Name = "${var.project_name}-db-${count.index + 1}"
   })
 }
 
 # RDS Proxy
 resource "aws_db_proxy" "main" {
-  name                   = "${var.project_name}-rds-proxy"
+  name                   = "${var.project_name}-proxy"
   engine_family         = "POSTGRESQL"
   auth {
     auth_scheme = "SECRETS"
@@ -112,11 +112,27 @@ resource "aws_db_proxy" "main" {
   vpc_subnet_ids         = var.private_subnet_ids
   vpc_security_group_ids = [var.rds_security_group_id]
   
-  target {
-    db_cluster_identifier = aws_rds_cluster.main.cluster_identifier
-  }
+
   
   tags = var.tags
+}
+
+# RDS Proxy Default Target Group
+resource "aws_db_proxy_default_target_group" "main" {
+  db_proxy_name = aws_db_proxy.main.name
+
+  connection_pool_config {
+    connection_borrow_timeout    = 120
+    max_connections_percent      = 100
+    max_idle_connections_percent = 50
+  }
+}
+
+# RDS Proxy Target
+resource "aws_db_proxy_target" "main" {
+  db_cluster_identifier = aws_rds_cluster.main.cluster_identifier
+  db_proxy_name         = aws_db_proxy.main.name
+  target_group_name     = aws_db_proxy_default_target_group.main.name
 }
 
 # RDS Proxy IAM Role
@@ -160,7 +176,7 @@ resource "aws_iam_role_policy" "rds_proxy" {
 
 # DynamoDB Table for Support Tickets
 resource "aws_dynamodb_table" "support_tickets" {
-  name           = "${var.project_name}-support-tickets"
+  name           = "${var.project_name}-tickets"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "tenant_id"
   range_key      = "ticket_id"
@@ -181,8 +197,9 @@ resource "aws_dynamodb_table" "support_tickets" {
   }
 
   global_secondary_index {
-    name     = "status-index"
-    hash_key = "status"
+    name               = "status-index"
+    hash_key           = "status"
+    projection_type    = "ALL"
   }
 
   server_side_encryption {
@@ -190,13 +207,13 @@ resource "aws_dynamodb_table" "support_tickets" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-support-tickets"
+    Name = "${var.project_name}-tickets"
   })
 }
 
 # DynamoDB Table for User Sessions
 resource "aws_dynamodb_table" "user_sessions" {
-  name           = "${var.project_name}-user-sessions"
+  name           = "${var.project_name}-sessions"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "session_id"
 
@@ -215,21 +232,19 @@ resource "aws_dynamodb_table" "user_sessions" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-user-sessions"
+    Name = "${var.project_name}-sessions"
   })
 }
 
 # DAX Subnet Group
 resource "aws_dax_subnet_group" "main" {
-  name       = "${var.project_name}-dax-subnet-group"
+  name       = "${var.project_name}-dax-subnets"
   subnet_ids = var.private_subnet_ids
-
-  tags = var.tags
 }
 
 # DAX Cluster
 resource "aws_dax_cluster" "main" {
-  cluster_name       = "${var.project_name}-dax-cluster"
+  cluster_name       = "${var.project_name}-dax"
   iam_role_arn      = aws_iam_role.dax.arn
   node_type         = "dax.t3.small"
   replication_factor = 2  # Multi-AZ with 2 nodes

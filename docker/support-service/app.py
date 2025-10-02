@@ -28,11 +28,11 @@ ssm = boto3.client('ssm', region_name='eu-west-2')
 def get_table():
     """Get DynamoDB table with DAX acceleration"""
     try:
-        return get_dax_table('saas-platform-support-tickets')
+        return get_dax_table('saas-platform-tickets')
     except Exception as e:
         logger.error(f"Could not get DAX table: {e}")
         # Fallback to direct DynamoDB
-        return dynamodb.Table('saas-platform-support-tickets')
+        return dynamodb.Table('saas-platform-tickets')
 
 def send_urgent_notification(ticket_data):
     """Send SNS notification for urgent tickets"""

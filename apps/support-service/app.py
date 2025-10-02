@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # AWS clients
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-2')
-table = dynamodb.Table('saas-platform-support-tickets')
+table = dynamodb.Table('saas-platform-tickets')
 
 def token_required(f):
     @wraps(f)
