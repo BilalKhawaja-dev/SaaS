@@ -172,6 +172,8 @@ resource "random_password" "readonly_password" {
 
 # Demo Users matching database demo data
 resource "aws_cognito_user" "admin_user" {
+  count = var.create_demo_users ? 1 : 0
+  
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "admin@democorp.com"
   password     = "AdminDemo123!"  # Fixed password for demo (12+ chars)
@@ -184,9 +186,15 @@ resource "aws_cognito_user" "admin_user" {
   }
   
   message_action = "SUPPRESS"
+  
+  lifecycle {
+    ignore_changes = [password, attributes]
+  }
 }
 
 resource "aws_cognito_user" "regular_user" {
+  count = var.create_demo_users ? 1 : 0
+  
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "user@testinc.com"
   password     = "UserDemo123!"   # Fixed password for demo (12+ chars)
@@ -199,9 +207,15 @@ resource "aws_cognito_user" "regular_user" {
   }
   
   message_action = "SUPPRESS"
+  
+  lifecycle {
+    ignore_changes = [password, attributes]
+  }
 }
 
 resource "aws_cognito_user" "readonly_user" {
+  count = var.create_demo_users ? 1 : 0
+  
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "readonly@enterpriseltd.com"
   password     = "ReadonlyDemo123!"  # Fixed password for demo (12+ chars)
@@ -214,25 +228,35 @@ resource "aws_cognito_user" "readonly_user" {
   }
   
   message_action = "SUPPRESS"
+  
+  lifecycle {
+    ignore_changes = [password, attributes]
+  }
 }
 
 # User Group Memberships
 resource "aws_cognito_user_in_group" "admin_membership" {
+  count = var.create_demo_users ? 1 : 0
+  
   user_pool_id = aws_cognito_user_pool.main.id
   group_name   = aws_cognito_user_group.admin.name
-  username     = aws_cognito_user.admin_user.username
+  username     = aws_cognito_user.admin_user[0].username
 }
 
 resource "aws_cognito_user_in_group" "user_membership" {
+  count = var.create_demo_users ? 1 : 0
+  
   user_pool_id = aws_cognito_user_pool.main.id
   group_name   = aws_cognito_user_group.user.name
-  username     = aws_cognito_user.regular_user.username
+  username     = aws_cognito_user.regular_user[0].username
 }
 
 resource "aws_cognito_user_in_group" "readonly_membership" {
+  count = var.create_demo_users ? 1 : 0
+  
   user_pool_id = aws_cognito_user_pool.main.id
   group_name   = aws_cognito_user_group.readonly.name
-  username     = aws_cognito_user.readonly_user.username
+  username     = aws_cognito_user.readonly_user[0].username
 }
 
 # Lambda function for token customization

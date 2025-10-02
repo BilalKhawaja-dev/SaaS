@@ -174,8 +174,9 @@ resource "aws_ecs_task_definition" "frontend" {
 
   container_definitions = jsonencode([
     {
-      name  = "frontend"
-      image = "nginx:alpine"
+      name   = "frontend"
+      image  = "nginx:alpine"
+      memory = 256
       portMappings = [
         {
           containerPort = 80
@@ -214,8 +215,9 @@ resource "aws_ecs_task_definition" "subscription_service" {
 
   container_definitions = jsonencode([
     {
-      name  = "subscription-service"
-      image = "python:3.11-slim"
+      name   = "subscription-service"
+      image  = "python:3.11-slim"
+      memory = 512
       portMappings = [
         {
           containerPort = 5000
@@ -272,8 +274,9 @@ resource "aws_ecs_task_definition" "support_service" {
 
   container_definitions = jsonencode([
     {
-      name  = "support-service"
-      image = "python:3.11-slim"
+      name   = "support-service"
+      image  = "python:3.11-slim"
+      memory = 512
       portMappings = [
         {
           containerPort = 5001
