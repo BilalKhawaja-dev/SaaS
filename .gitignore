@@ -29,3 +29,6 @@ modules/api/authorizer.zip
 # Temporary files
 *.tmp
 *.temp
+
+# Kiro IDE files
+.kiro/
