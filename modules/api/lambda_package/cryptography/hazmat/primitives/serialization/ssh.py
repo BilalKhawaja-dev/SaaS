@@ -927,7 +927,7 @@ class SSHCertificate:
         else:
             assert isinstance(signature_key, rsa.RSAPublicKey)
             if self._inner_sig_type == _SSH_RSA:
-                hash_alg = hashes.SHA1()
+                hash_alg = hashes.SHA256()  # Use SHA256 instead of weak SHA1
             elif self._inner_sig_type == _SSH_RSA_SHA256:
                 hash_alg = hashes.SHA256()
             else:

@@ -3,22 +3,22 @@ output "ecs_cluster_name" {
   value       = aws_ecs_cluster.main.name
 }
 
-output "alb_dns_name" {
-  description = "ALB DNS name"
-  value       = aws_lb.main.dns_name
+output "ecs_cluster_id" {
+  description = "ECS cluster ID"
+  value       = aws_ecs_cluster.main.id
 }
 
-output "alb_arn" {
-  description = "ALB ARN"
-  value       = aws_lb.main.arn
+output "frontend_service_name" {
+  description = "Frontend ECS service name"
+  value       = aws_ecs_service.frontend.name
 }
 
-output "alb_zone_id" {
-  description = "ALB zone ID"
-  value       = aws_lb.main.zone_id
+output "subscription_service_name" {
+  description = "Subscription ECS service name"
+  value       = aws_ecs_service.subscription_service.name
 }
 
-output "target_group_arn" {
-  description = "Target group ARN"
-  value       = aws_lb_target_group.app.arn
+output "support_service_name" {
+  description = "Support ECS service name"
+  value       = aws_ecs_service.support_service.name
 }

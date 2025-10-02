@@ -8,19 +8,14 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "public_subnet_id" {
-  description = "Public subnet ID"
-  type        = string
+variable "public_subnet_ids" {
+  description = "Public subnet IDs"
+  type        = list(string)
 }
 
-variable "private_subnet_id" {
-  description = "Private subnet ID"
-  type        = string
-}
-
-variable "alb_security_group_id" {
-  description = "ALB security group ID"
-  type        = string
+variable "private_subnet_ids" {
+  description = "Private subnet IDs"
+  type        = list(string)
 }
 
 variable "ecs_security_group_id" {
@@ -55,6 +50,31 @@ variable "log_group_name" {
 
 variable "sns_topic_arn" {
   description = "SNS topic ARN for notifications"
+  type        = string
+}
+
+variable "nlb_target_group_frontend_arn" {
+  description = "NLB target group ARN for frontend service"
+  type        = string
+}
+
+variable "nlb_target_group_subscription_arn" {
+  description = "NLB target group ARN for subscription service"
+  type        = string
+}
+
+variable "nlb_target_group_support_arn" {
+  description = "NLB target group ARN for support service"
+  type        = string
+}
+
+variable "user_pool_id" {
+  description = "Cognito User Pool ID"
+  type        = string
+}
+
+variable "user_pool_client_id" {
+  description = "Cognito User Pool Client ID"
   type        = string
 }
 

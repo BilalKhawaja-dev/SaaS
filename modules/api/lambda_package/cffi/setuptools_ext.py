@@ -19,11 +19,18 @@ def execfile(filename, glob):
     # a normal import is that in some packages, the intermediate
     # __init__.py files may already try to import the file that
     # we are generating.
-    with open(filename) as f:
-        src = f.read()
-    src += '\n'      # Python 2.6 compatibility
-    code = compile(src, filename, 'exec')
-    exec(code, glob, glob)
+    import ast
+    import importlib.util
+    
+    # Use importlib for safer module loading
+    spec = importlib.util.spec_from_file_location("__cffi_build__", filename)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load module from {filename}")
+    
+    module = importlib.util.module_from_spec(spec)
+    # Update glob with module's namespace
+    spec.loader.exec_module(module)
+    glob.update(vars(module))
 
 
 def add_cffi_module(dist, mod_spec):

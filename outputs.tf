@@ -3,9 +3,9 @@ output "vpc_id" {
   value       = module.networking.vpc_id
 }
 
-output "alb_dns_name" {
-  description = "Application Load Balancer DNS name"
-  value       = module.compute.alb_dns_name
+output "ecs_cluster_name" {
+  description = "ECS cluster name"
+  value       = module.compute.ecs_cluster_name
 }
 
 output "api_gateway_url" {

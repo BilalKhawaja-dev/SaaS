@@ -64,7 +64,14 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
           "dynamodb:Scan",
           "secretsmanager:GetSecretValue",
           "ssm:GetParameter",
-          "ssm:GetParameters"
+          "ssm:GetParameters",
+          "sns:Publish",
+          "dax:GetItem",
+          "dax:PutItem",
+          "dax:UpdateItem",
+          "dax:DeleteItem",
+          "dax:Query",
+          "dax:Scan"
         ]
         Resource = "*"
       }
@@ -127,4 +134,24 @@ resource "aws_iam_instance_profile" "ecs_instance_profile" {
   role = aws_iam_role.ecs_instance_role.name
 
   tags = var.tags
+}
+
+# Generate JWT secret
+resource "random_password" "jwt_secret" {
+  length  = 64
+  special = true
+}
+
+# Store JWT secret in Secrets Manager
+resource "aws_secretsmanager_secret" "jwt_secret" {
+  name = "${var.project_name}/jwt/secret"
+  description = "JWT secret key for token validation"
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "jwt_secret" {
+  secret_id     = aws_secretsmanager_secret.jwt_secret.id
+  secret_string = jsonencode({
+    jwt_secret_key = random_password.jwt_secret.result
+  })
 }

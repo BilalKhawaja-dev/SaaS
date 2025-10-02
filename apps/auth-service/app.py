@@ -169,11 +169,12 @@ def login():
         
         if bcrypt.checkpw(data['password'].encode('utf-8'), password_hash.encode('utf-8')):
             # Generate JWT token
+            jwt_secret = os.environ.get('JWT_SECRET_KEY', os.urandom(32).hex())
             token = jwt.encode({
                 'user_id': str(user_id),
                 'tenant_id': str(tenant_id),
                 'exp': datetime.utcnow() + timedelta(hours=24)
-            }, 'your-secret-key', algorithm='HS256')
+            }, jwt_secret, algorithm='HS256')
             
             return jsonify({
                 'success': True,
@@ -207,7 +208,8 @@ def validate_token():
         if token.startswith('Bearer '):
             token = token[7:]
         
-        payload = jwt.decode(token, 'your-secret-key', algorithms=['HS256'])
+        jwt_secret = os.environ.get('JWT_SECRET_KEY', os.urandom(32).hex())
+        payload = jwt.decode(token, jwt_secret, algorithms=['HS256'])
         
         return jsonify({
             'valid': True,

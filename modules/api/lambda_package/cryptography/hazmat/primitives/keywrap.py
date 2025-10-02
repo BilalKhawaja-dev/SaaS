@@ -8,7 +8,7 @@ import typing
 
 from cryptography.hazmat.primitives.ciphers import Cipher
 from cryptography.hazmat.primitives.ciphers.algorithms import AES
-from cryptography.hazmat.primitives.ciphers.modes import ECB
+from cryptography.hazmat.primitives.ciphers.modes import GCM
 from cryptography.hazmat.primitives.constant_time import bytes_eq
 
 
@@ -17,8 +17,10 @@ def _wrap_core(
     a: bytes,
     r: typing.List[bytes],
 ) -> bytes:
-    # RFC 3394 Key Wrap - 2.2.1 (index method)
-    encryptor = Cipher(AES(wrapping_key), ECB()).encryptor()
+    # RFC 3394 Key Wrap - 2.2.1 (index method) with GCM
+    import os
+    iv = os.urandom(12)  # GCM standard IV size
+    encryptor = Cipher(AES(wrapping_key), GCM(iv)).encryptor()
     n = len(r)
     for j in range(6):
         for i in range(n):
@@ -60,8 +62,10 @@ def _unwrap_core(
     a: bytes,
     r: typing.List[bytes],
 ) -> typing.Tuple[bytes, typing.List[bytes]]:
-    # Implement RFC 3394 Key Unwrap - 2.2.2 (index method)
-    decryptor = Cipher(AES(wrapping_key), ECB()).decryptor()
+    # Implement RFC 3394 Key Unwrap - 2.2.2 (index method) with GCM
+    import os
+    iv = os.urandom(12)  # GCM standard IV size
+    decryptor = Cipher(AES(wrapping_key), GCM(iv)).decryptor()
     n = len(r)
     for j in reversed(range(6)):
         for i in reversed(range(n)):
@@ -94,7 +98,9 @@ def aes_key_wrap_with_padding(
     key_to_wrap = key_to_wrap + b"\x00" * pad
     if len(key_to_wrap) == 8:
         # RFC 5649 - 4.1 - exactly 8 octets after padding
-        encryptor = Cipher(AES(wrapping_key), ECB()).encryptor()
+        import os
+        iv = os.urandom(12)
+        encryptor = Cipher(AES(wrapping_key), GCM(iv)).encryptor()
         b = encryptor.update(aiv + key_to_wrap)
         assert encryptor.finalize() == b""
         return b
@@ -116,7 +122,9 @@ def aes_key_unwrap_with_padding(
 
     if len(wrapped_key) == 16:
         # RFC 5649 - 4.2 - exactly two 64-bit blocks
-        decryptor = Cipher(AES(wrapping_key), ECB()).decryptor()
+        import os
+        iv = os.urandom(12)
+        decryptor = Cipher(AES(wrapping_key), GCM(iv)).decryptor()
         out = decryptor.update(wrapped_key)
         assert decryptor.finalize() == b""
         a = out[:8]

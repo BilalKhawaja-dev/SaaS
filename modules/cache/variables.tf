@@ -3,9 +3,9 @@ variable "project_name" {
   type        = string
 }
 
-variable "private_subnet_id" {
-  description = "Private subnet ID"
-  type        = string
+variable "private_subnet_ids" {
+  description = "Private subnet IDs for multi-AZ deployment"
+  type        = list(string)
 }
 
 variable "elasticache_security_group_id" {

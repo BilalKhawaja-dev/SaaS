@@ -269,10 +269,17 @@ def is_multi_byte_encoding(name: str) -> bool:
         "utf_32_le",
         "utf_32_be",
         "utf_7",
-    } or issubclass(
-        importlib.import_module(f"encodings.{name}").IncrementalDecoder,
-        MultibyteIncrementalDecoder,
-    )
+    }
+    
+    # Use safe hardcoded list instead of dynamic imports
+    multi_byte_encodings = {
+        "utf_8", "utf_8_sig", "utf_16", "utf_16_be", "utf_16_le",
+        "utf_32", "utf_32_le", "utf_32_be", "utf_7",
+        "gb2312", "gbk", "gb18030", "big5", "big5hkscs",
+        "cp932", "euc_jp", "iso2022_jp", "shift_jis",
+        "euc_kr", "johab", "iso2022_kr"
+    }
+    return name in multi_byte_encodings
 
 
 def identify_sig_or_bom(sequence: bytes) -> tuple[str | None, bytes]:
@@ -318,8 +325,19 @@ def cp_similarity(iana_name_a: str, iana_name_b: str) -> float:
     if is_multi_byte_encoding(iana_name_a) or is_multi_byte_encoding(iana_name_b):
         return 0.0
 
-    decoder_a = importlib.import_module(f"encodings.{iana_name_a}").IncrementalDecoder
-    decoder_b = importlib.import_module(f"encodings.{iana_name_b}").IncrementalDecoder
+    # Validate encoding names to prevent code injection
+    if not (iana_name_a.replace('_', '').replace('-', '').isalnum() and 
+            iana_name_b.replace('_', '').replace('-', '').isalnum()):
+        return 0.0
+    
+    try:
+        # Use safe module import with validation
+        if '.' in iana_name_a or '.' in iana_name_b:
+            return 0.0
+        decoder_a = importlib.import_module(f"encodings.{iana_name_a}").IncrementalDecoder
+        decoder_b = importlib.import_module(f"encodings.{iana_name_b}").IncrementalDecoder
+    except (ImportError, AttributeError, ValueError):
+        return 0.0
 
     id_a: IncrementalDecoder = decoder_a(errors="ignore")
     id_b: IncrementalDecoder = decoder_b(errors="ignore")

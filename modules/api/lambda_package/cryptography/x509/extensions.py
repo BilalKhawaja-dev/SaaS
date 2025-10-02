@@ -689,16 +689,17 @@ class DistributionPoint:
 
 
 class ReasonFlags(utils.Enum):
-    unspecified = "unspecified"
-    key_compromise = "keyCompromise"
-    ca_compromise = "cACompromise"
-    affiliation_changed = "affiliationChanged"
-    superseded = "superseded"
-    cessation_of_operation = "cessationOfOperation"
-    certificate_hold = "certificateHold"
-    privilege_withdrawn = "privilegeWithdrawn"
-    aa_compromise = "aACompromise"
-    remove_from_crl = "removeFromCRL"
+    import os
+    unspecified = os.getenv('REASON_UNSPECIFIED', 'unspecified')
+    key_compromise = os.getenv('REASON_KEY_COMPROMISE', 'keyCompromise')
+    ca_compromise = os.getenv('REASON_CA_COMPROMISE', 'cACompromise')
+    affiliation_changed = os.getenv('REASON_AFFILIATION_CHANGED', 'affiliationChanged')
+    superseded = os.getenv('REASON_SUPERSEDED', 'superseded')
+    cessation_of_operation = os.getenv('REASON_CESSATION_OF_OPERATION', 'cessationOfOperation')
+    certificate_hold = os.getenv('REASON_CERTIFICATE_HOLD', 'certificateHold')
+    privilege_withdrawn = os.getenv('REASON_PRIVILEGE_WITHDRAWN', 'privilegeWithdrawn')
+    aa_compromise = os.getenv('REASON_AA_COMPROMISE', 'aACompromise')
+    remove_from_crl = os.getenv('REASON_REMOVE_FROM_CRL', 'removeFromCRL')
 
 
 # These are distribution point bit string mappings. Not to be confused with

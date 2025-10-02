@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise SaaS Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh; 
+            color: #333;
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        .header { 
+            text-align: center; 
+            color: white; 
+            margin-bottom: 40px; 
+            padding: 40px 0;
+        }
+        
+        .header h1 { 
+            font-size: 3.5rem; 
+            margin-bottom: 15px; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p { 
+            font-size: 1.3rem; 
+            opacity: 0.9; 
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .nav-bar {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-link {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .user-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .services { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+            gap: 30px; 
+            margin-bottom: 40px; 
+        }
+        
+        .service-card { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 35px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .service-card:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+        
+        .service-card h3 { 
+            color: #333; 
+            margin-bottom: 15px; 
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .service-card p { 
+            color: #666; 
+            margin-bottom: 25px; 
+            line-height: 1.7; 
+            font-size: 1.1rem;
+        }
+        
+        .btn { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            border: none; 
+            padding: 14px 28px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 1rem; 
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .auth-section { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 40px; 
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+        
+        .form-group { margin-bottom: 25px; }
+        
+        .form-group label { 
+            display: block; 
+            margin-bottom: 8px; 
+            color: #333; 
+            font-weight: 600; 
+        }
+        
+        .form-group input, .form-group select { 
+            width: 100%; 
+            padding: 15px; 
+            border: 2px solid #e1e5e9; 
+            border-radius: 10px; 
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus { 
+            outline: none; 
+            border-color: #667eea; 
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .tabs { 
+            display: flex; 
+            margin-bottom: 25px; 
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 5px;
+        }
+        
+        .tab { 
+            flex: 1; 
+            padding: 15px; 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active { 
+            background: #667eea; 
+            color: white; 
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .hidden { display: none; }
+        
+        .user-info { 
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%); 
+            padding: 20px; 
+            border-radius: 15px; 
+            margin-bottom: 25px;
+            border-left: 5px solid #28a745;
+        }
+        
+        .subscription-display { 
+            font-size: 1.8rem; 
+            font-weight: bold; 
+            color: #28a745; 
+            text-align: center; 
+            margin: 25px 0; 
+        }
+        
+        .ticket-list { 
+            max-height: 400px; 
+            overflow-y: auto; 
+            margin-top: 20px;
+        }
+        
+        .ticket-item { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            margin-bottom: 15px; 
+            border-radius: 12px; 
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .ticket-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .ticket-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-open { background: #fff3cd; color: #856404; }
+        .status-in_progress { background: #cce5ff; color: #004085; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        .status-closed { background: #f8d7da; color: #721c24; }
+        
+        .priority-urgent { border-left-color: #dc3545 !important; }
+        .priority-high { border-left-color: #fd7e14 !important; }
+        .priority-medium { border-left-color: #ffc107 !important; }
+        .priority-low { border-left-color: #28a745 !important; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 40px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover { color: #000; }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2.5rem; }
+            .services { grid-template-columns: 1fr; }
+            .nav-bar { flex-direction: column; gap: 15px; }
+            .nav-links { flex-wrap: wrap; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Enterprise SaaS Platform</h1>
+            <p>Your complete multi-tenant business solution with advanced analytics, customer service, and subscription management</p>
+        </div>
+
+        <!-- Navigation Bar -->
+        <div id="navBar" class="nav-bar hidden">
+            <div class="nav-links">
+                <button class="nav-link active" onclick="showPage('dashboard')">🏠 Dashboard</button>
+                <button class="nav-link" onclick="showPage('subscription')">💳 Subscription</button>
+                <button class="nav-link" onclick="showPage('support')">🎫 Customer Service</button>
+                <button class="nav-link" onclick="showPage('analytics')">📊 Analytics</button>
+            </div>
+            <div class="user-status">
+                <span id="userWelcome">Welcome!</span>
+                <button onclick="logout()" class="btn btn-secondary">Logout</button>
+            </div>
+        </div>
+
+        <!-- Authentication Section -->
+        <div id="authSection" class="auth-section">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('login')">Login</button>
+                <button class="tab" onclick="showTab('signup')">Sign Up</button>
+                <button class="tab" onclick="showTab('cognito')">Cognito Login</button>
+            </div>
+            
+            <div id="loginTab" class="tab-content active">
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" id="loginEmail" placeholder="user@testinc.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="password" id="loginPassword" placeholder="User123!" required>
+                    </div>
+                    <button type="submit" class="btn">Login with Service</button>
+                </form>
+                <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 8px; font-size: 0.9rem;">
+                    <strong>Demo Accounts:</strong><br>
+                    • admin@democorp.com / Admin123!<br>
+                    • user@testinc.com / User123!<br>
+                    • readonly@enterpriseltd.com / Readonly123!
+                </div>
+            </div>
+            
+            <div id="signupTab" class="tab-content">
+                <form id="signupForm">
+                    <div class="form-group">
+                        <label>Company Name:</label>
+                        <input type="text" id="signupCompany" placeholder="Your Company Inc." required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" id="signupEmail" placeholder="admin@yourcompany.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="password" id="signupPassword" placeholder="Min 12 chars with symbols" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Subscription Plan:</label>
+                        <select id="signupPlan" required>
+                            <option value="basic">Basic - $29/month (5 users, 10GB storage)</option>
+                            <option value="pro" selected>Pro - $99/month (25 users, 100GB storage)</option>
+                            <option value="enterprise">Enterprise - $299/month (Unlimited users, 1TB storage)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">Create Account</button>
+                </form>
+            </div>
+
+            <div id="cognitoTab" class="tab-content">
+                <div style="text-align: center; padding: 20px;">
+                    <p style="margin-bottom: 20px;">Use Amazon Cognito for secure authentication with MFA support</p>
+                    <button onclick="loginWithCognito()" class="btn">Login with Cognito</button>
+                    <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; font-size: 0.9rem;">
+                        <strong>Cognito Demo Accounts:</strong><br>
+                        Use the same credentials as above with Cognito Hosted UI
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Page -->
+        <div id="dashboardPage" class="page">
+            <div class="services">
+                <div class="service-card">
+                    <h3>💳 Subscription Management</h3>
+                    <p>Manage your subscription plan, billing information, and view usage analytics for your organization.</p>
+                    <div id="subscriptionSummary" class="subscription-display">Loading...</div>
+                    <button onclick="showPage('subscription')" class="btn">Manage Subscription</button>
+                </div>
+
+                <div class="service-card">
+                    <h3>🎫 Customer Service</h3>
+                    <p>Access our comprehensive customer service portal to create tickets, track issues, and get expert support.</p>
+                    <div id="ticketSummary" style="margin: 15px 0; font-weight: 600;">Loading tickets...</div>
+                    <button onclick="showPage('support')" class="btn">Open Customer Service</button>
+                </div>
+
+                <div class="service-card">
+                    <h3>📊 Analytics Dashboard</h3>
+                    <p>View detailed analytics, usage metrics, and business insights with real-time data visualization.</p>
+                    <button onclick="showPage('analytics')" class="btn">View Analytics</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscription Page -->
+        <div id="subscriptionPage" class="page">
+            <div class="auth-section">
+                <h2 style="margin-bottom: 25px; color: #333;">💳 Subscription Management</h2>
+                <div id="subscriptionDetails">Loading subscription details...</div>
+                
+                <div style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 15px;">Change Plan</h3>
+                    <form id="updatePlanForm">
+                        <div class="form-group">
+                            <label>Select New Plan:</label>
+                            <select id="newPlan" required>
+                                <option value="basic">Basic - $29/month</option>
+                                <option value="pro">Pro - $99/month</option>
+                                <option value="enterprise">Enterprise - $299/month</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn">Update Plan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support/Customer Service Page -->
+        <div id="supportPage" class="page">
+            <div class="auth-section">
+                <h2 style="margin-bottom: 25px; color: #333;">🎫 Customer Service Portal</h2>
+                
+                <!-- Create New Ticket -->
+                <div style="margin-bottom: 40px;">
+                    <h3 style="margin-bottom: 20px;">Create New Support Ticket</h3>
+                    <form id="ticketForm">
+                        <div class="form-group">
+                            <label>Subject:</label>
+                            <input type="text" id="ticketSubject" placeholder="Brief description of your issue" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Priority:</label>
+                            <select id="ticketPriority" required>
+                                <option value="low">Low - General inquiry</option>
+                                <option value="medium" selected>Medium - Standard issue</option>
+                                <option value="high">High - Important issue</option>
+                                <option value="urgent">Urgent - Critical issue (sends immediate notification)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Description:</label>
+                            <textarea id="ticketDescription" rows="4" placeholder="Please provide detailed information about your issue..." required style="width: 100%; padding: 15px; border: 2px solid #e1e5e9; border-radius: 10px; font-family: inherit; resize: vertical;"></textarea>
+                        </div>
+                        <button type="submit" class="btn">Create Ticket</button>
+                    </form>
+                </div>
+
+                <!-- Existing Tickets -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>Your Support Tickets</h3>
+                        <button onclick="loadTickets()" class="btn btn-secondary">🔄 Refresh</button>
+                    </div>
+                    <div id="ticketList" class="ticket-list">Loading tickets...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div id="analyticsPage" class="page">
+            <div class="auth-section">
+                <h2 style="margin-bottom: 25px; color: #333;">📊 Analytics Dashboard</h2>
+                <div style="text-align: center; padding: 60px 20px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">📈</div>
+                    <h3 style="margin-bottom: 15px;">Advanced Analytics Coming Soon</h3>
+                    <p style="color: #666; font-size: 1.1rem; line-height: 1.6;">
+                        We're building comprehensive analytics including usage metrics, 
+                        performance dashboards, and business intelligence tools.
+                    </p>
+                    <div style="margin-top: 30px;">
+                        <button onclick="alert('Analytics features will be available in the next release!')" class="btn">
+                            Get Notified When Available
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket Details Modal -->
+    <div id="ticketModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTicketModal()">&times;</span>
+            <div id="ticketModalContent">
+                <!-- Ticket details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let authToken = null;
+        let currentPage = 'dashboard';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            showPage('dashboard');
+            checkAuthStatus();
+        });
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        function showPage(pageName) {
+            // Update navigation
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            event?.target?.classList.add('active');
+            
+            // Update pages
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageName + 'Page')?.classList.add('active');
+            
+            currentPage = pageName;
+            
+            // Load page-specific data
+            if (authToken) {
+                switch(pageName) {
+                    case 'dashboard':
+                        loadDashboardData();
+                        break;
+                    case 'subscription':
+                        loadSubscriptionData();
+                        break;
+                    case 'support':
+                        loadTickets();
+                        break;
+                }
+            }
+        }
+
+        function checkAuthStatus() {
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('currentUser');
+            
+            if (token && user) {
+                authToken = token;
+                currentUser = JSON.parse(user);
+                showUserSection();
+            }
+        }
+
+        // Authentication Functions
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            showLoading('Logging in...');
+            
+            try {
+                const response = await fetch('/api/subscription/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    authToken = data.token;
+                    
+                    // Store in localStorage
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    showUserSection();
+                    showAlert('Login successful!', 'success');
+                } else {
+                    showAlert('Login failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Login error: ' + error.message, 'error');
+            }
+            
+            hideLoading();
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const company = document.getElementById('signupCompany').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const plan = document.getElementById('signupPlan').value;
+            
+            showLoading('Creating account...');
+            
+            try {
+                const response = await fetch('/api/subscription/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ company, email, password, plan })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('Account created successfully! Please login.', 'success');
+                    showTab('login');
+                    document.getElementById('signupForm').reset();
+                } else {
+                    showAlert('Signup failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Signup error: ' + error.message, 'error');
+            }
+            
+            hideLoading();
+        });
+
+        function loginWithCognito() {
+            // This would redirect to Cognito Hosted UI
+            showAlert('Redirecting to Cognito Hosted UI...', 'success');
+            // In a real implementation, this would redirect to the Cognito domain
+            // window.location.href = cognitoHostedUIUrl;
+        }
+
+        function showUserSection() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('navBar').classList.remove('hidden');
+            document.getElementById('userWelcome').textContent = `Welcome, ${currentUser.company || currentUser.email}!`;
+            showPage('dashboard');
+        }
+
+        function logout() {
+            currentUser = null;
+            authToken = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            
+            document.getElementById('authSection').classList.remove('hidden');
+            document.getElementById('navBar').classList.add('hidden');
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            
+            showAlert('Logged out successfully', 'success');
+        }
+
+        // Dashboard Functions
+        async function loadDashboardData() {
+            if (!authToken) return;
+            
+            try {
+                // Load subscription summary
+                const subResponse = await fetch('/api/subscription/status', {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                const subData = await subResponse.json();
+                document.getElementById('subscriptionSummary').textContent = 
+                    `${subData.plan?.toUpperCase()} Plan - $${subData.amount}/month`;
+                
+                // Load ticket summary
+                const ticketResponse = await fetch('/api/support/tickets', {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                const ticketData = await ticketResponse.json();
+                const openTickets = ticketData.tickets?.filter(t => t.status === 'open').length || 0;
+                document.getElementById('ticketSummary').textContent = 
+                    `${openTickets} open tickets, ${ticketData.tickets?.length || 0} total`;
+                    
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Subscription Functions
+        async function loadSubscriptionData() {
+            if (!authToken) return;
+            
+            try {
+                const response = await fetch('/api/subscription/status', {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                const data = await response.json();
+                
+                document.getElementById('subscriptionDetails').innerHTML = `
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <h4>Current Subscription</h4>
+                        <p><strong>Company:</strong> ${data.company_name}</p>
+                        <p><strong>Plan:</strong> ${data.plan?.toUpperCase()}</p>
+                        <p><strong>Status:</strong> <span style="color: #28a745;">${data.status?.toUpperCase()}</span></p>
+                        <p><strong>Amount:</strong> $${data.amount}/${data.billing_cycle}</p>
+                        <p><strong>Next Billing:</strong> ${new Date(data.next_billing_date).toLocaleDateString()}</p>
+                    </div>
+                `;
+                
+                // Set current plan in dropdown
+                document.getElementById('newPlan').value = data.plan;
+                
+            } catch (error) {
+                console.error('Error loading subscription data:', error);
+                document.getElementById('subscriptionDetails').innerHTML = 
+                    '<div class="alert alert-error">Error loading subscription data</div>';
+            }
+        }
+
+        document.getElementById('updatePlanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPlan = document.getElementById('newPlan').value;
+            
+            showLoading('Updating plan...');
+            
+            try {
+                const response = await fetch('/api/subscription/update', {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + authToken 
+                    },
+                    body: JSON.stringify({ plan: newPlan })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('Plan updated successfully!', 'success');
+                    loadSubscriptionData();
+                } else {
+                    showAlert('Error updating plan: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error updating plan: ' + error.message, 'error');
+            }
+            
+            hideLoading();
+        });
+
+        // Support/Ticket Functions
+        async function loadTickets() {
+            if (!authToken) return;
+            
+            document.getElementById('ticketList').innerHTML = '<div class="loading"></div> Loading tickets...';
+            
+            try {
+                const response = await fetch('/api/support/tickets', {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                const data = await response.json();
+                
+                if (data.tickets && data.tickets.length > 0) {
+                    document.getElementById('ticketList').innerHTML = data.tickets.map(ticket => `
+                        <div class="ticket-item priority-${ticket.priority}" onclick="showTicketDetails('${ticket.id}')">
+                            <div class="ticket-header">
+                                <strong>${ticket.subject}</strong>
+                                <span class="ticket-status status-${ticket.status}">${ticket.status.replace('_', ' ')}</span>
+                            </div>
+                            <p style="margin: 10px 0; color: #666;">${ticket.description}</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: #888;">
+                                <span>Priority: <strong style="text-transform: capitalize;">${ticket.priority}</strong></span>
+                                <span>Created: ${new Date(ticket.created_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('ticketList').innerHTML = 
+                        '<div style="text-align: center; padding: 40px; color: #666;">No tickets found. Create your first ticket above!</div>';
+                }
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+                document.getElementById('ticketList').innerHTML = 
+                    '<div class="alert alert-error">Error loading tickets</div>';
+            }
+        }
+
+        document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!authToken) return;
+            
+            const subject = document.getElementById('ticketSubject').value;
+            const description = document.getElementById('ticketDescription').value;
+            const priority = document.getElementById('ticketPriority').value;
+            
+            showLoading('Creating ticket...');
+            
+            try {
+                const response = await fetch('/api/support/tickets', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + authToken 
+                    },
+                    body: JSON.stringify({ subject, description, priority })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showAlert(
+                        priority === 'urgent' 
+                            ? 'Urgent ticket created! Notification sent to support team.' 
+                            : 'Ticket created successfully!', 
+                        'success'
+                    );
+                    document.getElementById('ticketForm').reset();
+                    loadTickets();
+                } else {
+                    showAlert('Error creating ticket: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error creating ticket: ' + error.message, 'error');
+            }
+            
+            hideLoading();
+        });
+
+        function showTicketDetails(ticketId) {
+            // This would show a modal with ticket details
+            document.getElementById('ticketModalContent').innerHTML = `
+                <h3>Ticket Details</h3>
+                <p>Ticket ID: ${ticketId}</p>
+                <p>Loading ticket details...</p>
+            `;
+            document.getElementById('ticketModal').style.display = 'block';
+        }
+
+        function closeTicketModal() {
+            document.getElementById('ticketModal').style.display = 'none';
+        }
+
+        // Utility Functions
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            document.body.insertBefore(alertDiv, document.body.firstChild);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        function showLoading(message) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loadingOverlay';
+            loadingDiv.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; 
+                justify-content: center; z-index: 9999; color: white; font-size: 1.2rem;
+            `;
+            loadingDiv.innerHTML = `<div><div class="loading"></div> ${message}</div>`;
+            document.body.appendChild(loadingDiv);
+        }
+
+        function hideLoading() {
+            const loadingDiv = document.getElementById('loadingOverlay');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('ticketModal');
+            if (event.target === modal) {
+                closeTicketModal();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -212,8 +212,11 @@ class Lexer:
         if isinstance(tabfile, types.ModuleType):
             lextab = tabfile
         else:
-            exec('import %s' % tabfile)
-            lextab = sys.modules[tabfile]
+            import importlib
+            # Validate module name to prevent code injection
+            if not tabfile.replace('_', '').replace('.', '').isalnum():
+                raise ValueError(f"Invalid module name: {tabfile}")
+            lextab = importlib.import_module(tabfile)
 
         if getattr(lextab, '_tabversion', '0.0') != __tabversion__:
             raise ImportError('Inconsistent PLY version')
@@ -1036,8 +1039,12 @@ def lex(module=None, object=None, debug=False, optimize=False, lextab='lextab',
                 else:
                     parts = lextab.split('.')
                     pkgname = '.'.join(parts[:-1])
-                    exec('import %s' % pkgname)
-                    srcfile = getattr(sys.modules[pkgname], '__file__', '')
+                    # Validate package name to prevent code injection
+                    if not pkgname.replace('_', '').replace('.', '').isalnum():
+                        raise ValueError(f"Invalid package name: {pkgname}")
+                    import importlib
+                    pkg_module = importlib.import_module(pkgname)
+                    srcfile = getattr(pkg_module, '__file__', '')
             outputdir = os.path.dirname(srcfile)
         try:
             lexobj.writetab(lextab, outputdir)

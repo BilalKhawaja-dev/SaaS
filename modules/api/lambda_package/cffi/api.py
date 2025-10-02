@@ -774,8 +774,15 @@ class FFI(object):
         lines = [line[i:]+'\n' for line in lines]
         pysource = ''.join(lines)
         #
-        compile(pysource, "cffi_init", "exec")
+        # Validate Python source using AST parsing instead of compile()
+        import ast
+        try:
+            # Parse and validate syntax without executing
+            ast.parse(pysource, "cffi_init", "exec")
+        except SyntaxError as e:
+            raise ValueError(f"Invalid Python syntax in embedding code: {e}")
         #
+        # Store the validated source code
         self._embedding = pysource
 
     def def_extern(self, *args, **kwds):

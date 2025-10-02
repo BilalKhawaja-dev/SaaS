@@ -31,7 +31,14 @@ def encoding_unicode_range(iana_name: str) -> list[str]:
     if is_multi_byte_encoding(iana_name):
         raise OSError("Function not supported on multi-byte code page")
 
-    decoder = importlib.import_module(f"encodings.{iana_name}").IncrementalDecoder
+    # Validate iana_name to prevent code injection
+    if not iana_name.replace('_', '').replace('-', '').isalnum():
+        raise ValueError(f"Invalid encoding name: {iana_name}")
+    
+    try:
+        decoder = importlib.import_module(f"encodings.{iana_name}").IncrementalDecoder
+    except (ImportError, AttributeError):
+        raise OSError(f"Encoding {iana_name} not supported")
 
     p: IncrementalDecoder = decoder(errors="ignore")
     seen_ranges: dict[str, int] = {}

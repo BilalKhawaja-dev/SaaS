@@ -1,9 +1,14 @@
 output "valkey_endpoint" {
-  description = "Valkey cluster endpoint"
-  value       = aws_elasticache_cluster.main.cache_nodes[0].address
+  description = "Valkey primary endpoint"
+  value       = aws_elasticache_replication_group.main.primary_endpoint_address
 }
 
 output "valkey_port" {
   description = "Valkey cluster port"
-  value       = aws_elasticache_cluster.main.cache_nodes[0].port
+  value       = aws_elasticache_replication_group.main.port
+}
+
+output "valkey_reader_endpoint" {
+  description = "Valkey reader endpoint"
+  value       = aws_elasticache_replication_group.main.reader_endpoint_address
 }

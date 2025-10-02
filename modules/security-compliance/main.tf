@@ -29,6 +29,38 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  rule {
+    name     = "BlockLog4jLookup"
+    priority = 2
+    action {
+      block {}
+    }
+
+    statement {
+      byte_match_statement {
+        search_string = "${jndi:"
+        field_to_match {
+          all_query_arguments {}
+        }
+        text_transformation {
+          priority = 0
+          type     = "URL_DECODE"
+        }
+        text_transformation {
+          priority = 1
+          type     = "LOWERCASE"
+        }
+        positional_constraint = "CONTAINS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${var.project_name}-Log4jBlock"
+      sampled_requests_enabled   = true
+    }
+  }
+
   tags = var.tags
 
   visibility_config {

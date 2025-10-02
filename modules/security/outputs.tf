@@ -17,3 +17,8 @@ output "ecs_instance_profile_name" {
   description = "Name of the ECS instance profile"
   value       = aws_iam_instance_profile.ecs_instance_profile.name
 }
+
+output "jwt_secret_arn" {
+  description = "ARN of the JWT secret in Secrets Manager"
+  value       = aws_secretsmanager_secret.jwt_secret.arn
+}

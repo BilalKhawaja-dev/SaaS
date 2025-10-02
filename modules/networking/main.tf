@@ -18,28 +18,34 @@ resource "aws_internet_gateway" "main" {
   })
 }
 
-# Public Subnet
+# Public Subnets
 resource "aws_subnet" "public" {
+  count = length(var.availability_zones)
+  
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr
-  availability_zone       = var.availability_zone
+  cidr_block              = var.public_subnet_cidrs[count.index]
+  availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-public-subnet"
+    Name = "${var.project_name}-public-subnet-${count.index + 1}"
     Type = "public"
+    AZ   = var.availability_zones[count.index]
   })
 }
 
-# Private Subnet
+# Private Subnets
 resource "aws_subnet" "private" {
+  count = length(var.availability_zones)
+  
   vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_cidr
-  availability_zone = var.availability_zone
+  cidr_block        = var.private_subnet_cidrs[count.index]
+  availability_zone = var.availability_zones[count.index]
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-private-subnet"
+    Name = "${var.project_name}-private-subnet-${count.index + 1}"
     Type = "private"
+    AZ   = var.availability_zones[count.index]
   })
 }
 
@@ -57,16 +63,37 @@ resource "aws_route_table" "public" {
   })
 }
 
-# Route Table Association for Public Subnet
+# Route Table Associations for Public Subnets
 resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
+  count = length(var.availability_zones)
+  
+  subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
+}
+
+# Route Table for Private Subnets
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-private-rt"
+  })
+}
+
+# Route Table Associations for Private Subnets
+resource "aws_route_table_association" "private" {
+  count = length(var.availability_zones)
+  
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
 }
 
 # VPC Endpoints for cost optimization (avoid NAT Gateway)
 resource "aws_vpc_endpoint" "s3" {
-  vpc_id       = aws_vpc.main.id
-  service_name = "com.amazonaws.${var.region}.s3"
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.public.id, aws_route_table.private.id]
   
   tags = merge(var.tags, {
     Name = "${var.project_name}-s3-endpoint"
@@ -74,8 +101,10 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 resource "aws_vpc_endpoint" "dynamodb" {
-  vpc_id       = aws_vpc.main.id
-  service_name = "com.amazonaws.${var.region}.dynamodb"
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.region}.dynamodb"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.public.id, aws_route_table.private.id]
   
   tags = merge(var.tags, {
     Name = "${var.project_name}-dynamodb-endpoint"
@@ -83,8 +112,8 @@ resource "aws_vpc_endpoint" "dynamodb" {
 }
 
 # Security Groups
-resource "aws_security_group" "alb" {
-  name_prefix = "${var.project_name}-alb-"
+resource "aws_security_group" "api_gateway_vpc_link" {
+  name_prefix = "${var.project_name}-apigw-"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -109,7 +138,7 @@ resource "aws_security_group" "alb" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-alb-sg"
+    Name = "${var.project_name}-apigw-sg"
   })
 }
 
@@ -117,11 +146,20 @@ resource "aws_security_group" "ecs" {
   name_prefix = "${var.project_name}-ecs-"
   vpc_id      = aws_vpc.main.id
 
+  # Allow traffic from API Gateway VPC Link
   ingress {
-    from_port       = 0
-    to_port         = 65535
+    from_port       = 5000
+    to_port         = 5002
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
+    security_groups = [aws_security_group.api_gateway_vpc_link.id]
+  }
+
+  # Allow internal ECS communication
+  ingress {
+    from_port = 0
+    to_port   = 65535
+    protocol  = "tcp"
+    self      = true
   }
 
   egress {

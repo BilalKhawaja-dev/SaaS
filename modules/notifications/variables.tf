@@ -3,27 +3,17 @@ variable "project_name" {
   type        = string
 }
 
-variable "notification_email" {
-  description = "Email address for notifications"
+variable "environment" {
+  description = "Environment name"
   type        = string
 }
 
-variable "db_instance_id" {
-  description = "RDS instance identifier"
+variable "vpc_id" {
+  description = "VPC ID for resources"
   type        = string
 }
 
-variable "ecs_service_name" {
-  description = "ECS service name"
-  type        = string
-}
-
-variable "ecs_cluster_name" {
-  description = "ECS cluster name"
-  type        = string
-}
-
-variable "tags" {
-  description = "Common tags"
-  type        = map(string)
+variable "private_subnet_ids" {
+  description = "Private subnet IDs"
+  type        = list(string)
 }

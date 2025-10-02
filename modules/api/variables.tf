@@ -18,14 +18,14 @@ variable "user_pool_client_id" {
   type        = string
 }
 
-variable "alb_arn" {
-  description = "Application Load Balancer ARN"
+variable "vpc_id" {
+  description = "VPC ID for VPC Links"
   type        = string
 }
 
-variable "alb_dns_name" {
-  description = "Application Load Balancer DNS name"
-  type        = string
+variable "private_subnet_ids" {
+  description = "Private subnet IDs for VPC Links"
+  type        = list(string)
 }
 
 variable "tags" {

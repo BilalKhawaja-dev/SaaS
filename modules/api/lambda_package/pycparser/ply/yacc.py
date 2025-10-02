@@ -1559,7 +1559,8 @@ class Grammar(object):
         for n, s in enumerate(syms):
             if s[0] in "'\"":
                 try:
-                    c = eval(s)
+                    import ast
+                    c = ast.literal_eval(s)
                     if (len(c) > 1):
                         raise GrammarError('%s:%d: Literal token %s in rule %r may only be a single character' %
                                            (file, line, s, prodname))
@@ -1567,7 +1568,7 @@ class Grammar(object):
                         self.Terminals[c] = []
                     syms[n] = c
                     continue
-                except SyntaxError:
+                except (SyntaxError, ValueError):
                     pass
             if not _is_identifier.match(s) and s != '%prec':
                 raise GrammarError('%s:%d: Illegal name %r in rule %r' % (file, line, s, prodname))
@@ -1979,8 +1980,11 @@ class LRTable(object):
         if isinstance(module, types.ModuleType):
             parsetab = module
         else:
-            exec('import %s' % module)
-            parsetab = sys.modules[module]
+            import importlib
+            # Validate module name to prevent code injection
+            if not module.replace('_', '').replace('.', '').isalnum():
+                raise ValueError(f"Invalid module name: {module}")
+            parsetab = importlib.import_module(module)
 
         if parsetab._tabversion != __tabversion__:
             raise VersionError('yacc table file version is out of date')
@@ -3251,8 +3255,12 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
             else:
                 parts = tabmodule.split('.')
                 pkgname = '.'.join(parts[:-1])
-                exec('import %s' % pkgname)
-                srcfile = getattr(sys.modules[pkgname], '__file__', '')
+                # Validate package name to prevent code injection
+                if not pkgname.replace('_', '').replace('.', '').isalnum():
+                    raise ValueError(f"Invalid package name: {pkgname}")
+                import importlib
+                pkg_module = importlib.import_module(pkgname)
+                srcfile = getattr(pkg_module, '__file__', '')
         outputdir = os.path.dirname(srcfile)
 
     # Determine if the module is package of a package or not.

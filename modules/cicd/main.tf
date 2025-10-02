@@ -134,7 +134,16 @@ resource "aws_iam_role_policy" "codebuild" {
       },
       {
         Effect = "Allow"
-        Action = "*"
+        Action = [
+          "ec2:*",
+          "iam:GetRole",
+          "iam:PassRole",
+          "lambda:*",
+          "apigateway:*",
+          "cognito-idp:*",
+          "rds:*",
+          "cloudwatch:*"
+        ]
         Resource = "*"
       }
     ]

@@ -8,9 +8,9 @@ variable "region" {
   type        = string
 }
 
-variable "availability_zone" {
-  description = "Availability zone"
-  type        = string
+variable "availability_zones" {
+  description = "Availability zones for multi-AZ deployment"
+  type        = list(string)
 }
 
 variable "vpc_cidr" {
@@ -18,14 +18,14 @@ variable "vpc_cidr" {
   type        = string
 }
 
-variable "public_subnet_cidr" {
-  description = "CIDR block for public subnet"
-  type        = string
+variable "public_subnet_cidrs" {
+  description = "CIDR blocks for public subnets"
+  type        = list(string)
 }
 
-variable "private_subnet_cidr" {
-  description = "CIDR block for private subnet"
-  type        = string
+variable "private_subnet_cidrs" {
+  description = "CIDR blocks for private subnets"
+  type        = list(string)
 }
 
 variable "tags" {

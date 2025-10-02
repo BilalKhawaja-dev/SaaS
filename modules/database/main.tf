@@ -43,7 +43,7 @@ resource "aws_ssm_parameter" "db_name" {
 # DB Subnet Group
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-db-subnet-group"
-  subnet_ids = [var.private_subnet_id] # Single AZ for cost optimization
+  subnet_ids = var.private_subnet_ids # Multi-AZ deployment
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-db-subnet-group"
@@ -63,6 +63,9 @@ resource "aws_rds_cluster" "main" {
   vpc_security_group_ids = [var.rds_security_group_id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
   
+  # Multi-AZ configuration
+  availability_zones = ["eu-west-2a", "eu-west-2b"]
+  
   backup_retention_period = 7
   preferred_backup_window = "03:00-04:00"
   preferred_maintenance_window = "sun:04:00-sun:05:00"
@@ -81,16 +84,19 @@ resource "aws_rds_cluster" "main" {
   })
 }
 
-# Aurora Serverless v2 Instance
+# Aurora Serverless v2 Instances (Multi-AZ)
 resource "aws_rds_cluster_instance" "main" {
-  identifier         = "${var.project_name}-aurora-instance"
+  count = 2  # One instance per AZ
+  
+  identifier         = "${var.project_name}-aurora-instance-${count.index + 1}"
   cluster_identifier = aws_rds_cluster.main.id
   instance_class     = "db.serverless"
   engine            = aws_rds_cluster.main.engine
   engine_version    = aws_rds_cluster.main.engine_version
+  availability_zone  = count.index == 0 ? "eu-west-2a" : "eu-west-2b"
   
   tags = merge(var.tags, {
-    Name = "${var.project_name}-aurora-instance"
+    Name = "${var.project_name}-aurora-instance-${count.index + 1}"
   })
 }
 
@@ -103,7 +109,7 @@ resource "aws_db_proxy" "main" {
     secret_arn  = aws_secretsmanager_secret.db_password.arn
   }
   role_arn               = aws_iam_role.rds_proxy.arn
-  vpc_subnet_ids         = [var.private_subnet_id]
+  vpc_subnet_ids         = var.private_subnet_ids
   vpc_security_group_ids = [var.rds_security_group_id]
   
   target {
@@ -216,7 +222,7 @@ resource "aws_dynamodb_table" "user_sessions" {
 # DAX Subnet Group
 resource "aws_dax_subnet_group" "main" {
   name       = "${var.project_name}-dax-subnet-group"
-  subnet_ids = [var.private_subnet_id]
+  subnet_ids = var.private_subnet_ids
 
   tags = var.tags
 }
@@ -226,7 +232,7 @@ resource "aws_dax_cluster" "main" {
   cluster_name       = "${var.project_name}-dax-cluster"
   iam_role_arn      = aws_iam_role.dax.arn
   node_type         = "dax.t3.small"
-  replication_factor = 1
+  replication_factor = 2  # Multi-AZ with 2 nodes
   
   subnet_group_name   = aws_dax_subnet_group.main.name
   security_group_ids  = [aws_security_group.dax.id]
@@ -281,4 +287,12 @@ resource "aws_iam_role" "dax" {
 resource "aws_iam_role_policy_attachment" "dax" {
   role       = aws_iam_role.dax.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonDaxFullAccess"
+}
+
+# Store DAX endpoint in SSM Parameter Store
+resource "aws_ssm_parameter" "dax_endpoint" {
+  name  = "/${var.project_name}/cache/dax/endpoint"
+  type  = "String"
+  value = aws_dax_cluster.main.cluster_address
+  tags  = var.tags
 }

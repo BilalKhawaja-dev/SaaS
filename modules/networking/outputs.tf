@@ -3,19 +3,29 @@ output "vpc_id" {
   value       = aws_vpc.main.id
 }
 
+output "public_subnet_ids" {
+  description = "IDs of the public subnets"
+  value       = aws_subnet.public[*].id
+}
+
+output "private_subnet_ids" {
+  description = "IDs of the private subnets"
+  value       = aws_subnet.private[*].id
+}
+
 output "public_subnet_id" {
-  description = "ID of the public subnet"
-  value       = aws_subnet.public.id
+  description = "ID of the first public subnet (for backward compatibility)"
+  value       = aws_subnet.public[0].id
 }
 
 output "private_subnet_id" {
-  description = "ID of the private subnet"
-  value       = aws_subnet.private.id
+  description = "ID of the first private subnet (for backward compatibility)"
+  value       = aws_subnet.private[0].id
 }
 
-output "alb_security_group_id" {
-  description = "ID of the ALB security group"
-  value       = aws_security_group.alb.id
+output "api_gateway_vpc_link_security_group_id" {
+  description = "ID of the API Gateway VPC Link security group"
+  value       = aws_security_group.api_gateway_vpc_link.id
 }
 
 output "ecs_security_group_id" {

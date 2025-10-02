@@ -37,13 +37,18 @@ resource "aws_launch_template" "ecs" {
 # Auto Scaling Group
 resource "aws_autoscaling_group" "ecs" {
   name                = "${var.project_name}-ecs-asg"
-  vpc_zone_identifier = [var.private_subnet_id]
+  vpc_zone_identifier = var.private_subnet_ids
   min_size            = 1
   max_size            = 5
-  desired_capacity    = 1
+  desired_capacity    = 2  # Distribute across AZs
   
-  target_group_arns = [aws_lb_target_group.app.arn]
-  health_check_type = "ELB"
+  target_group_arns = [
+    var.nlb_target_group_frontend_arn,
+    var.nlb_target_group_subscription_arn,
+    var.nlb_target_group_support_arn
+  ]
+  
+  health_check_type         = "ELB"
   health_check_grace_period = 300
 
   launch_template {
@@ -91,15 +96,15 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
+  namespace           = "AWS/ECS"
   period              = "300"
   statistic           = "Average"
   threshold           = "90"
-  alarm_description   = "This metric monitors ec2 cpu utilization"
+  alarm_description   = "This metric monitors ECS cluster CPU utilization"
   alarm_actions       = [aws_autoscaling_policy.scale_up.arn, var.sns_topic_arn]
 
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.ecs.name
+    ClusterName = aws_ecs_cluster.main.name
   }
 
   tags = var.tags
@@ -111,66 +116,42 @@ resource "aws_cloudwatch_metric_alarm" "cpu_low" {
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
+  namespace           = "AWS/ECS"
   period              = "300"
   statistic           = "Average"
   threshold           = "20"
-  alarm_description   = "This metric monitors ec2 cpu utilization"
+  alarm_description   = "This metric monitors ECS cluster CPU utilization"
   alarm_actions       = [aws_autoscaling_policy.scale_down.arn]
 
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.ecs.name
+    ClusterName = aws_ecs_cluster.main.name
   }
 
   tags = var.tags
 }
 
-# Application Load Balancer
-resource "aws_lb" "main" {
-  name               = "${var.project_name}-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [var.alb_security_group_id]
-  subnets            = [var.public_subnet_id] # Single AZ for cost
+# CloudWatch Alarm - Service Health
+resource "aws_cloudwatch_metric_alarm" "service_count_low" {
+  alarm_name          = "${var.project_name}-service-count-low"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "RunningTaskCount"
+  namespace           = "AWS/ECS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "1"
+  alarm_description   = "This metric monitors ECS service running task count"
+  alarm_actions       = [var.sns_topic_arn]
 
-  enable_deletion_protection = false
-
-  tags = var.tags
-}
-
-# ALB Target Group
-resource "aws_lb_target_group" "app" {
-  name     = "${var.project_name}-app-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = var.vpc_id
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    interval            = 30
-    matcher             = "200"
-    path                = "/health"
-    port                = "traffic-port"
-    protocol            = "HTTP"
-    timeout             = 5
-    unhealthy_threshold = 2
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = aws_ecs_service.frontend.name
   }
 
   tags = var.tags
 }
 
-# ALB Listener
-resource "aws_lb_listener" "app" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = "80"
-  protocol          = "HTTP"
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
-  }
-}
 
 # Data source for ECS optimized AMI
 data "aws_ami" "ecs_optimized" {
@@ -198,11 +179,18 @@ resource "aws_ecs_task_definition" "frontend" {
       portMappings = [
         {
           containerPort = 80
-          hostPort      = 0
+          hostPort      = 5002
           protocol      = "tcp"
         }
       ]
       essential = true
+      healthCheck = {
+        command = ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1"]
+        interval = 30
+        timeout = 10
+        retries = 3
+        startPeriod = 30
+      }
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -217,8 +205,8 @@ resource "aws_ecs_task_definition" "frontend" {
   tags = var.tags
 }
 
-resource "aws_ecs_task_definition" "auth_service" {
-  family                   = "${var.project_name}-auth-service"
+resource "aws_ecs_task_definition" "subscription_service" {
+  family                   = "${var.project_name}-subscription-service"
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
   execution_role_arn       = var.ecs_execution_role_arn
@@ -226,63 +214,47 @@ resource "aws_ecs_task_definition" "auth_service" {
 
   container_definitions = jsonencode([
     {
-      name  = "auth-service"
+      name  = "subscription-service"
       image = "python:3.11-slim"
       portMappings = [
         {
           containerPort = 5000
-          hostPort      = 0
+          hostPort      = 5000
           protocol      = "tcp"
         }
       ]
       essential = true
-      command = [
-        "sh", "-c",
-        "pip install flask psycopg2-binary boto3 bcrypt PyJWT && python -c 'from flask import Flask; app=Flask(__name__); @app.route(\"/health\"); def health(): return {\"status\": \"healthy\"}; app.run(host=\"0.0.0.0\", port=5000)'"
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = var.log_group_name
-          "awslogs-region"        = "eu-west-2"
-          "awslogs-stream-prefix" = "auth-service"
-        }
-      }
-    }
-  ])
-
-  tags = var.tags
-}
-
-resource "aws_ecs_task_definition" "balance_service" {
-  family                   = "${var.project_name}-balance-service"
-  network_mode             = "bridge"
-  requires_compatibilities = ["EC2"]
-  execution_role_arn       = var.ecs_execution_role_arn
-  task_role_arn           = var.ecs_task_role_arn
-
-  container_definitions = jsonencode([
-    {
-      name  = "balance-service"
-      image = "python:3.11-slim"
-      portMappings = [
+      environment = [
         {
-          containerPort = 5001
-          hostPort      = 0
-          protocol      = "tcp"
+          name  = "AWS_DEFAULT_REGION"
+          value = "eu-west-2"
+        },
+        {
+          name  = "USER_POOL_ID"
+          value = var.user_pool_id
+        },
+        {
+          name  = "CLIENT_ID"
+          value = var.user_pool_client_id
         }
       ]
-      essential = true
       command = [
         "sh", "-c",
-        "pip install flask psycopg2-binary boto3 PyJWT && python -c 'from flask import Flask; app=Flask(__name__); @app.route(\"/health\"); def health(): return {\"status\": \"healthy\"}; app.run(host=\"0.0.0.0\", port=5001)'"
+        "apt-get update && apt-get install -y gcc libpq-dev curl && pip install flask==3.0.0 psycopg2-binary==2.9.9 boto3==1.34.0 bcrypt==4.1.2 PyJWT==2.8.0 redis==5.0.1 requests==2.31.0 && python -c \"from flask import Flask, jsonify; import logging; logging.basicConfig(level=logging.INFO); app=Flask(__name__); @app.route('/health'); def health(): return jsonify({'status': 'healthy'}); @app.route('/api/subscription/status'); def status(): return jsonify({'status': 'active', 'plan': 'demo'}); app.run(host='0.0.0.0', port=5000)\""
       ]
+      healthCheck = {
+        command = ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+        interval = 30
+        timeout = 10
+        retries = 3
+        startPeriod = 60
+      }
       logConfiguration = {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = var.log_group_name
           "awslogs-region"        = "eu-west-2"
-          "awslogs-stream-prefix" = "balance-service"
+          "awslogs-stream-prefix" = "subscription-service"
         }
       }
     }
@@ -304,16 +276,41 @@ resource "aws_ecs_task_definition" "support_service" {
       image = "python:3.11-slim"
       portMappings = [
         {
-          containerPort = 5002
-          hostPort      = 0
+          containerPort = 5001
+          hostPort      = 5001
           protocol      = "tcp"
         }
       ]
       essential = true
+      environment = [
+        {
+          name  = "AWS_DEFAULT_REGION"
+          value = "eu-west-2"
+        },
+        {
+          name  = "USER_POOL_ID"
+          value = var.user_pool_id
+        },
+        {
+          name  = "CLIENT_ID"
+          value = var.user_pool_client_id
+        },
+        {
+          name  = "SNS_TOPIC_ARN"
+          value = var.sns_topic_arn
+        }
+      ]
       command = [
         "sh", "-c",
-        "pip install flask boto3 PyJWT && python -c 'from flask import Flask; app=Flask(__name__); @app.route(\"/health\"); def health(): return {\"status\": \"healthy\"}; app.run(host=\"0.0.0.0\", port=5002)'"
+        "apt-get update && apt-get install -y curl && pip install flask==3.0.0 boto3==1.34.0 PyJWT==2.8.0 requests==2.31.0 && python -c \"from flask import Flask, jsonify; import logging; logging.basicConfig(level=logging.INFO); app=Flask(__name__); @app.route('/health'); def health(): return jsonify({'status': 'healthy'}); @app.route('/api/support/tickets', methods=['GET']); def get_tickets(): return jsonify({'tickets': []}); @app.route('/api/support/tickets', methods=['POST']); def create_ticket(): return jsonify({'success': True, 'ticket_id': 'demo-123'}); app.run(host='0.0.0.0', port=5001)\""
       ]
+      healthCheck = {
+        command = ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
+        interval = 30
+        timeout = 10
+        retries = 3
+        startPeriod = 60
+      }
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -335,31 +332,22 @@ resource "aws_ecs_service" "frontend" {
   task_definition = aws_ecs_task_definition.frontend.arn
   desired_count   = 1
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.app.arn
-    container_name   = "frontend"
-    container_port   = 80
+  placement_constraints {
+    type = "distinctInstance"
   }
 
-  depends_on = [aws_lb_listener.app]
-
   tags = var.tags
 }
 
-resource "aws_ecs_service" "auth_service" {
-  name            = "${var.project_name}-auth-service"
+resource "aws_ecs_service" "subscription_service" {
+  name            = "${var.project_name}-subscription-service"
   cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.auth_service.arn
+  task_definition = aws_ecs_task_definition.subscription_service.arn
   desired_count   = 1
 
-  tags = var.tags
-}
-
-resource "aws_ecs_service" "balance_service" {
-  name            = "${var.project_name}-balance-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.balance_service.arn
-  desired_count   = 1
+  placement_constraints {
+    type = "distinctInstance"
+  }
 
   tags = var.tags
 }
@@ -369,6 +357,10 @@ resource "aws_ecs_service" "support_service" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.support_service.arn
   desired_count   = 1
+
+  placement_constraints {
+    type = "distinctInstance"
+  }
 
   tags = var.tags
 }

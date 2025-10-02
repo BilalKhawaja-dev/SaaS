@@ -60,19 +60,19 @@ class Fernet:
     ) -> bytes:
         utils._check_bytes("data", data)
 
-        padder = padding.PKCS7(algorithms.AES.block_size).padder()
-        padded_data = padder.update(data) + padder.finalize()
         encryptor = Cipher(
             algorithms.AES(self._encryption_key),
-            modes.CBC(iv),
+            modes.GCM(iv),
         ).encryptor()
-        ciphertext = encryptor.update(padded_data) + encryptor.finalize()
+        ciphertext = encryptor.update(data) + encryptor.finalize()
+        auth_tag = encryptor.tag
 
         basic_parts = (
             b"\x80"
             + current_time.to_bytes(length=8, byteorder="big")
             + iv
             + ciphertext
+            + auth_tag
         )
 
         h = HMAC(self._signing_key, hashes.SHA256())
@@ -152,23 +152,17 @@ class Fernet:
         self._verify_signature(data)
 
         iv = data[9:25]
-        ciphertext = data[25:-32]
+        auth_tag = data[-48:-32]
+        ciphertext = data[25:-48]
         decryptor = Cipher(
-            algorithms.AES(self._encryption_key), modes.CBC(iv)
+            algorithms.AES(self._encryption_key), modes.GCM(iv, auth_tag)
         ).decryptor()
-        plaintext_padded = decryptor.update(ciphertext)
+        plaintext = decryptor.update(ciphertext)
         try:
-            plaintext_padded += decryptor.finalize()
+            plaintext += decryptor.finalize()
         except ValueError:
             raise InvalidToken
-        unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
-
-        unpadded = unpadder.update(plaintext_padded)
-        try:
-            unpadded += unpadder.finalize()
-        except ValueError:
-            raise InvalidToken
-        return unpadded
+        return plaintext
 
 
 class MultiFernet:
