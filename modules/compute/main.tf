@@ -1,3 +1,7 @@
+# Data sources for dynamic values
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
@@ -175,7 +179,7 @@ resource "aws_ecs_task_definition" "frontend" {
   container_definitions = jsonencode([
     {
       name   = "frontend"
-      image  = "nginx:alpine"
+      image  = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${var.project_name}/frontend:latest"
       memory = 256
       portMappings = [
         {
@@ -216,7 +220,7 @@ resource "aws_ecs_task_definition" "subscription_service" {
   container_definitions = jsonencode([
     {
       name   = "subscription-service"
-      image  = "python:3.11-slim"
+      image  = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${var.project_name}/subscription-service:latest"
       memory = 512
       portMappings = [
         {
@@ -240,10 +244,7 @@ resource "aws_ecs_task_definition" "subscription_service" {
           value = var.user_pool_client_id
         }
       ]
-      command = [
-        "sh", "-c",
-        "apt-get update && apt-get install -y gcc libpq-dev curl && pip install flask==3.0.0 psycopg2-binary==2.9.9 boto3==1.34.0 bcrypt==4.1.2 PyJWT==2.8.0 redis==5.0.1 requests==2.31.0 && python -c \"from flask import Flask, jsonify; import logging; logging.basicConfig(level=logging.INFO); app=Flask(__name__); @app.route('/health'); def health(): return jsonify({'status': 'healthy'}); @app.route('/api/subscription/status'); def status(): return jsonify({'status': 'active', 'plan': 'demo'}); app.run(host='0.0.0.0', port=5000)\""
-      ]
+
       healthCheck = {
         command = ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
         interval = 30
@@ -275,7 +276,7 @@ resource "aws_ecs_task_definition" "support_service" {
   container_definitions = jsonencode([
     {
       name   = "support-service"
-      image  = "python:3.11-slim"
+      image  = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${var.project_name}/support-service:latest"
       memory = 512
       portMappings = [
         {
@@ -303,10 +304,7 @@ resource "aws_ecs_task_definition" "support_service" {
           value = var.sns_topic_arn
         }
       ]
-      command = [
-        "sh", "-c",
-        "apt-get update && apt-get install -y curl && pip install flask==3.0.0 boto3==1.34.0 PyJWT==2.8.0 requests==2.31.0 && python -c \"from flask import Flask, jsonify; import logging; logging.basicConfig(level=logging.INFO); app=Flask(__name__); @app.route('/health'); def health(): return jsonify({'status': 'healthy'}); @app.route('/api/support/tickets', methods=['GET']); def get_tickets(): return jsonify({'tickets': []}); @app.route('/api/support/tickets', methods=['POST']); def create_ticket(): return jsonify({'success': True, 'ticket_id': 'demo-123'}); app.run(host='0.0.0.0', port=5001)\""
-      ]
+
       healthCheck = {
         command = ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
         interval = 30

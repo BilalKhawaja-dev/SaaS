@@ -117,34 +117,49 @@ def create_cognito_user(email, password, tenant_id, company_name):
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
+    """Health check endpoint - lightweight check for load balancer"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'subscription-service',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+@app.route('/health/detailed')
+def health_detailed():
+    """Detailed health check endpoint"""
+    health_status = {
+        'status': 'healthy',
+        'service': 'subscription-service',
+        'timestamp': datetime.utcnow().isoformat(),
+        'checks': {}
+    }
+    
+    # Test database connection
     try:
-        # Test database connection
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute('SELECT 1')
         cur.close()
         conn.close()
-        
-        # Test cache connection
-        cache = get_valkey_client()
-        cache_status = "connected" if cache and cache.ping() else "disconnected"
-        
-        return jsonify({
-            'status': 'healthy',
-            'service': 'subscription-service',
-            'database': 'connected',
-            'cache': cache_status,
-            'cognito': 'configured',
-            'timestamp': datetime.utcnow().isoformat()
-        })
+        health_status['checks']['database'] = 'connected'
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
-        }), 500
+        logger.warning(f"Database health check failed: {e}")
+        health_status['checks']['database'] = f'error: {str(e)}'
+        health_status['status'] = 'degraded'
+    
+    # Test cache connection
+    try:
+        cache = get_valkey_client()
+        if cache and cache.ping():
+            health_status['checks']['cache'] = 'connected'
+        else:
+            health_status['checks']['cache'] = 'disconnected'
+    except Exception as e:
+        health_status['checks']['cache'] = f'error: {str(e)}'
+    
+    health_status['checks']['cognito'] = 'configured'
+    
+    return jsonify(health_status)
 
 @app.route('/api/subscription/signup', methods=['POST'])
 def signup():

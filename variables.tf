@@ -81,3 +81,9 @@ variable "tags" {
     ManagedBy   = "terraform"
   }
 }
+
+variable "deployment_id" {
+  description = "Unique deployment identifier to avoid naming conflicts"
+  type        = string
+  default     = ""
+}

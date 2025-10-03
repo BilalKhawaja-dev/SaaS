@@ -33,8 +33,9 @@ module "networking" {
 module "security" {
   source = "./modules/security"
 
-  project_name = var.project_name
-  tags        = var.tags
+  project_name  = var.project_name
+  deployment_id = var.deployment_id
+  tags         = var.tags
 }
 
 # Database Module
@@ -47,6 +48,7 @@ module "database" {
   rds_security_group_id = module.networking.rds_security_group_id
   db_username           = var.db_username
   rds_instance_class    = var.rds_instance_class
+  deployment_id         = var.deployment_id
   tags                  = var.tags
 }
 
@@ -64,6 +66,14 @@ module "cache" {
 # Storage Module
 module "storage" {
   source = "./modules/storage"
+
+  project_name = var.project_name
+  tags        = var.tags
+}
+
+# ECR Module
+module "ecr" {
+  source = "./modules/ecr"
 
   project_name = var.project_name
   tags        = var.tags

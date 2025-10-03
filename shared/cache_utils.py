@@ -239,6 +239,10 @@ def get_dax_table(table_name: str):
     """Get DynamoDB table with DAX acceleration"""
     return dax_cache.get_table(table_name)
 
+def get_valkey_client(read_only=False):
+    """Get Valkey (Redis) client - compatibility function"""
+    return valkey_cache.get_client(read_only=read_only)
+
 # Cache TTL constants
 TTL_SHORT = 300      # 5 minutes
 TTL_MEDIUM = 900     # 15 minutes

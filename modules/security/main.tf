@@ -62,6 +62,7 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
           "dynamodb:DeleteItem",
           "dynamodb:Query",
           "dynamodb:Scan",
+          "dynamodb:DescribeTable",
           "secretsmanager:GetSecretValue",
           "ssm:GetParameter",
           "ssm:GetParameters",
@@ -144,7 +145,7 @@ resource "random_password" "jwt_secret" {
 
 # Store JWT secret in Secrets Manager
 resource "aws_secretsmanager_secret" "jwt_secret" {
-  name = "${var.project_name}/jwt/secret"
+  name = "${var.project_name}/jwt/secret${var.deployment_id != "" ? "-${var.deployment_id}" : ""}"
   description = "JWT secret key for token validation"
   tags = var.tags
 }

@@ -83,28 +83,44 @@ def send_urgent_notification(ticket_data):
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
+    """Health check endpoint - lightweight check for load balancer"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'support-service',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+@app.route('/health/detailed')
+def health_detailed():
+    """Detailed health check endpoint"""
+    health_status = {
+        'status': 'healthy',
+        'service': 'support-service',
+        'timestamp': datetime.utcnow().isoformat(),
+        'checks': {}
+    }
+    
+    # Test DynamoDB/DAX connection
     try:
-        # Test DynamoDB/DAX connection
         table = get_table()
-        # Simple table description to test connectivity
         table.table_status
-        
-        return jsonify({
-            'status': 'healthy',
-            'service': 'support-service',
-            'dynamodb': 'connected',
-            'dax': 'available',
-            'sns': 'configured',
-            'timestamp': datetime.utcnow().isoformat()
-        })
+        health_status['checks']['dynamodb'] = 'connected'
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
-        }), 500
+        logger.warning(f"DynamoDB health check failed: {e}")
+        health_status['checks']['dynamodb'] = f'error: {str(e)}'
+        health_status['status'] = 'degraded'
+    
+    # Test SNS configuration
+    try:
+        topic_arn = os.environ.get('SNS_TOPIC_ARN')
+        if topic_arn:
+            health_status['checks']['sns'] = 'configured'
+        else:
+            health_status['checks']['sns'] = 'not_configured'
+    except Exception as e:
+        health_status['checks']['sns'] = f'error: {str(e)}'
+    
+    return jsonify(health_status)
 
 @app.route('/api/support/tickets', methods=['GET'])
 @token_required()

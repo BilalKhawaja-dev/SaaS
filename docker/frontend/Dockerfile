@@ -7,13 +7,15 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY index.html /usr/share/nginx/html/
 COPY assets/ /usr/share/nginx/html/assets/
 
-# Create non-root user
+# Create non-root user and fix permissions
 RUN addgroup -g 1000 appuser && \
     adduser -D -s /bin/sh -u 1000 -G appuser appuser && \
     chown -R appuser:appuser /usr/share/nginx/html && \
     chown -R appuser:appuser /var/cache/nginx && \
     chown -R appuser:appuser /var/log/nginx && \
-    chown -R appuser:appuser /etc/nginx/conf.d
+    chown -R appuser:appuser /etc/nginx/conf.d && \
+    chown -R appuser:appuser /run && \
+    chown -R appuser:appuser /var/run
 
 # Switch to non-root user
 USER appuser

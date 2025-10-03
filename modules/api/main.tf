@@ -12,9 +12,9 @@ resource "aws_lb" "nlb" {
 
 # Target Groups for each service
 resource "aws_lb_target_group" "frontend" {
-  name     = "${var.project_name}-frontend-tg"
+  name     = "${var.project_name}-fe-http"
   port     = 5002
-  protocol = "TCP"
+  protocol = "HTTP"
   vpc_id   = var.vpc_id
   target_type = "instance"
 
@@ -22,19 +22,21 @@ resource "aws_lb_target_group" "frontend" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
+    path                = "/health"
     port                = "5002"
-    protocol            = "TCP"
+    protocol            = "HTTP"
     timeout             = 10
-    unhealthy_threshold = 2
+    unhealthy_threshold = 5
+    matcher             = "200"
   }
 
   tags = var.tags
 }
 
 resource "aws_lb_target_group" "subscription" {
-  name     = "${var.project_name}-subscription-tg"
+  name     = "${var.project_name}-sub-http"
   port     = 5000
-  protocol = "TCP"
+  protocol = "HTTP"
   vpc_id   = var.vpc_id
   target_type = "instance"
 
@@ -42,19 +44,21 @@ resource "aws_lb_target_group" "subscription" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
+    path                = "/health"
     port                = "5000"
-    protocol            = "TCP"
+    protocol            = "HTTP"
     timeout             = 10
-    unhealthy_threshold = 2
+    unhealthy_threshold = 5
+    matcher             = "200"
   }
 
   tags = var.tags
 }
 
 resource "aws_lb_target_group" "support" {
-  name     = "${var.project_name}-support-tg"
+  name     = "${var.project_name}-sup-http"
   port     = 5001
-  protocol = "TCP"
+  protocol = "HTTP"
   vpc_id   = var.vpc_id
   target_type = "instance"
 
@@ -62,10 +66,12 @@ resource "aws_lb_target_group" "support" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
+    path                = "/health"
     port                = "5001"
-    protocol            = "TCP"
+    protocol            = "HTTP"
     timeout             = 10
-    unhealthy_threshold = 2
+    unhealthy_threshold = 5
+    matcher             = "200"
   }
 
   tags = var.tags
@@ -75,7 +81,7 @@ resource "aws_lb_target_group" "support" {
 resource "aws_lb_listener" "frontend" {
   load_balancer_arn = aws_lb.nlb.arn
   port              = "5002"
-  protocol          = "TCP"
+  protocol          = "HTTP"
 
   default_action {
     type             = "forward"
@@ -86,7 +92,7 @@ resource "aws_lb_listener" "frontend" {
 resource "aws_lb_listener" "subscription" {
   load_balancer_arn = aws_lb.nlb.arn
   port              = "5000"
-  protocol          = "TCP"
+  protocol          = "HTTP"
 
   default_action {
     type             = "forward"
@@ -97,7 +103,7 @@ resource "aws_lb_listener" "subscription" {
 resource "aws_lb_listener" "support" {
   load_balancer_arn = aws_lb.nlb.arn
   port              = "5001"
-  protocol          = "TCP"
+  protocol          = "HTTP"
 
   default_action {
     type             = "forward"

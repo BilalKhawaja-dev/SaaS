@@ -1,12 +1,13 @@
-# Generate random password
+# Generate random password (exclude RDS invalid characters: /, @, ", space)
 resource "random_password" "db_password" {
   length  = 16
   special = true
+  override_special = "!#$%&*()_+-=[]{}|;:,.<>?"
 }
 
 # Store password in Secrets Manager
 resource "aws_secretsmanager_secret" "db_password" {
-  name = "${var.project_name}/database/password"
+  name = "${var.project_name}/database/password${var.deployment_id != "" ? "-${var.deployment_id}" : ""}"
   tags = var.tags
 }
 

@@ -7,3 +7,9 @@ variable "tags" {
   description = "Common tags"
   type        = map(string)
 }
+
+variable "deployment_id" {
+  description = "Unique deployment identifier"
+  type        = string
+  default     = ""
+}
