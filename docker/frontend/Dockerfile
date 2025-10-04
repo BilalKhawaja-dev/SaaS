@@ -7,6 +7,9 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY index.html /usr/share/nginx/html/
 COPY assets/ /usr/share/nginx/html/assets/
 
+# Install security updates
+RUN apk update && apk upgrade && apk add --no-cache curl
+
 # Create non-root user and fix permissions
 RUN addgroup -g 1000 appuser && \
     adduser -D -s /bin/sh -u 1000 -G appuser appuser && \
@@ -22,7 +25,7 @@ USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1
+    CMD curl -f http://localhost:80/health || exit 1
 
 EXPOSE 80
 

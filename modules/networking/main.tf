@@ -71,40 +71,43 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Elastic IP for NAT Gateway
+# Elastic IPs for NAT Gateways (one per AZ for HA)
 resource "aws_eip" "nat" {
+  count  = length(var.availability_zones)
   domain = "vpc"
   
   tags = merge(var.tags, {
-    Name = "${var.project_name}-nat-eip"
+    Name = "${var.project_name}-nat-eip-${count.index + 1}"
   })
   
   depends_on = [aws_internet_gateway.main]
 }
 
-# NAT Gateway
+# NAT Gateways (one per AZ for high availability)
 resource "aws_nat_gateway" "main" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
+  count         = length(var.availability_zones)
+  allocation_id = aws_eip.nat[count.index].id
+  subnet_id     = aws_subnet.public[count.index].id
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-nat-gateway"
+    Name = "${var.project_name}-nat-gateway-${count.index + 1}"
   })
 
   depends_on = [aws_internet_gateway.main]
 }
 
-# Route Table for Private Subnets
+# Route Tables for Private Subnets (one per AZ)
 resource "aws_route_table" "private" {
+  count  = length(var.availability_zones)
   vpc_id = aws_vpc.main.id
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id
+    nat_gateway_id = aws_nat_gateway.main[count.index].id
   }
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-private-rt"
+    Name = "${var.project_name}-private-rt-${count.index + 1}"
   })
 }
 
@@ -113,7 +116,7 @@ resource "aws_route_table_association" "private" {
   count = length(var.availability_zones)
   
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[count.index].id
 }
 
 # VPC Endpoints for cost optimization (avoid NAT Gateway)
@@ -121,7 +124,7 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${var.region}.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_route_table.public.id, aws_route_table.private.id]
+  route_table_ids   = concat([aws_route_table.public.id], aws_route_table.private[*].id)
   
   tags = merge(var.tags, {
     Name = "${var.project_name}-s3-endpoint"
@@ -132,7 +135,7 @@ resource "aws_vpc_endpoint" "dynamodb" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${var.region}.dynamodb"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_route_table.public.id, aws_route_table.private.id]
+  route_table_ids   = concat([aws_route_table.public.id], aws_route_table.private[*].id)
   
   tags = merge(var.tags, {
     Name = "${var.project_name}-dynamodb-endpoint"
@@ -180,6 +183,14 @@ resource "aws_security_group" "ecs" {
     to_port         = 5002
     protocol        = "tcp"
     security_groups = [aws_security_group.api_gateway_vpc_link.id]
+  }
+
+  # Allow NLB health checks from VPC CIDR
+  ingress {
+    from_port   = 5000
+    to_port     = 5002
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
   }
 
   # Allow internal ECS communication

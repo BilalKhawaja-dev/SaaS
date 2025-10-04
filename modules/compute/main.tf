@@ -43,8 +43,8 @@ resource "aws_autoscaling_group" "ecs" {
   name                = "${var.project_name}-ecs-asg"
   vpc_zone_identifier = var.private_subnet_ids
   min_size            = 1
-  max_size            = 5
-  desired_capacity    = 2  # Distribute across AZs
+  max_size            = 3
+  desired_capacity    = 1
   
   target_group_arns = [
     var.nlb_target_group_frontend_arn,
@@ -53,7 +53,7 @@ resource "aws_autoscaling_group" "ecs" {
   ]
   
   health_check_type         = "ELB"
-  health_check_grace_period = 300
+  health_check_grace_period = 900
 
   launch_template {
     id      = aws_launch_template.ecs.id
@@ -190,7 +190,7 @@ resource "aws_ecs_task_definition" "frontend" {
       ]
       essential = true
       healthCheck = {
-        command = ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1"]
+        command = ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
         interval = 30
         timeout = 10
         retries = 3
@@ -221,7 +221,7 @@ resource "aws_ecs_task_definition" "subscription_service" {
     {
       name   = "subscription-service"
       image  = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${var.project_name}/subscription-service:latest"
-      memory = 512
+      memory = 256
       portMappings = [
         {
           containerPort = 5000
@@ -277,7 +277,7 @@ resource "aws_ecs_task_definition" "support_service" {
     {
       name   = "support-service"
       image  = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${var.project_name}/support-service:latest"
-      memory = 512
+      memory = 256
       portMappings = [
         {
           containerPort = 5001
@@ -302,6 +302,10 @@ resource "aws_ecs_task_definition" "support_service" {
         {
           name  = "SNS_TOPIC_ARN"
           value = var.sns_topic_arn
+        },
+        {
+          name  = "DYNAMODB_TABLE_NAME"
+          value = "${var.project_name}-tickets"
         }
       ]
 

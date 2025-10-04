@@ -625,37 +625,7 @@
         // Authentication Functions
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            showLoading('Logging in...');
-            
-            try {
-                const response = await fetch('/api/subscription/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    currentUser = data.user;
-                    authToken = data.token;
-                    
-                    // Store in localStorage
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    
-                    showUserSection();
-                    showAlert('Login successful!', 'success');
-                } else {
-                    showAlert('Login failed: ' + data.message, 'error');
-                }
-            } catch (error) {
-                showAlert('Login error: ' + error.message, 'error');
-            }
-            
-            hideLoading();
+            showAlert('Please use Cognito Login tab for authentication', 'error');
         });
 
         document.getElementById('signupForm').addEventListener('submit', async (e) => {

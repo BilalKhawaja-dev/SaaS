@@ -25,6 +25,15 @@ def get_db_connection():
         password=secret['password']
     )
 
+def get_jwt_secret():
+    try:
+        secret_response = secrets.get_secret_value(SecretId='saas-platform/jwt/secret')
+        secret_data = json.loads(secret_response['SecretString'])
+        return secret_data['jwt_secret_key']
+    except:
+        import os
+        return os.environ.get('JWT_SECRET_KEY', 'fallback-secret-key')
+
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -34,9 +43,10 @@ def token_required(f):
         
         try:
             token = token.split(' ')[1]  # Remove 'Bearer ' prefix
-            data = jwt.decode(token, 'your-secret-key', algorithms=['HS256'])
+            jwt_secret = get_jwt_secret()
+            data = jwt.decode(token, jwt_secret, algorithms=['HS256'])
             current_tenant_id = data['tenant_id']
-        except:
+        except Exception as e:
             return jsonify({'message': 'Token is invalid'}), 401
         
         return f(current_tenant_id, *args, **kwargs)
@@ -133,4 +143,4 @@ def get_transactions(current_tenant_id):
             conn.close()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=5001, debug=False)

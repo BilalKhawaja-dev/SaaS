@@ -1,232 +1,181 @@
 #!/usr/bin/env python3
 """
-Test script for SNS notification system
-Tests the intelligent routing of support tickets to different teams
+Test script for the intelligent SNS notification system
+Creates test tickets with different priorities and content to verify routing
 """
 
-import requests
+import boto3
 import json
-import time
-import sys
+import uuid
 from datetime import datetime
 
-# Configuration
-API_BASE_URL = "http://localhost:8080"  # API Gateway URL
-TEST_TICKETS = [
-    {
-        "subject": "URGENT: System Down",
-        "description": "The entire system is not responding. All users are affected.",
-        "priority": "urgent"
-    },
-    {
-        "subject": "Password Reset Issue",
-        "description": "I forgot my password and the reset email is not working",
-        "priority": "high"
-    },
-    {
-        "subject": "Billing Question",
-        "description": "I was charged twice for my subscription this month",
-        "priority": "medium"
-    },
-    {
-        "subject": "API Integration Problem",
-        "description": "Getting 500 errors when calling the user management API",
-        "priority": "high"
-    },
-    {
-        "subject": "General Question",
-        "description": "How do I export my data from the platform?",
-        "priority": "low"
-    },
-    {
-        "subject": "Login Authentication Error",
-        "description": "Cannot authenticate with my credentials, getting invalid token error",
-        "priority": "medium"
-    },
-    {
-        "subject": "Payment Method Update",
-        "description": "Need to update my credit card information for billing",
-        "priority": "low"
-    },
-    {
-        "subject": "Database Connection Timeout",
-        "description": "Application is showing database connection timeouts frequently",
-        "priority": "high"
-    }
-]
-
-def get_auth_token():
-    """
-    Get authentication token for testing
-    In a real scenario, this would use Cognito authentication
-    """
-    # For testing, we'll use a mock token
-    # In production, implement proper Cognito authentication
-    return "mock-jwt-token-for-testing"
-
-def create_test_ticket(ticket_data, auth_token):
-    """Create a test support ticket"""
-    headers = {
-        'Authorization': f'Bearer {auth_token}',
-        'Content-Type': 'application/json'
-    }
-    
-    try:
-        response = requests.post(
-            f"{API_BASE_URL}/api/support/tickets",
-            headers=headers,
-            json=ticket_data,
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"✅ Created ticket: {result.get('ticket_id')} - {ticket_data['subject']}")
-            if ticket_data['priority'] == 'urgent':
-                print(f"   🚨 Urgent notification: {result.get('urgent_notification_sent', 'Unknown')}")
-            return result.get('ticket_id')
-        else:
-            print(f"❌ Failed to create ticket: {response.status_code} - {response.text}")
-            return None
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Network error creating ticket: {e}")
-        return None
-
-def test_ticket_routing():
+def test_notification_routing():
     """Test the intelligent ticket routing system"""
-    print("🧪 Testing SNS Notification System")
-    print("=" * 50)
     
-    auth_token = get_auth_token()
-    created_tickets = []
+    # AWS clients
+    sns = boto3.client('sns', region_name='eu-west-2')
     
-    for i, ticket_data in enumerate(TEST_TICKETS, 1):
-        print(f"\n📝 Test {i}/{len(TEST_TICKETS)}: {ticket_data['subject']}")
-        print(f"   Priority: {ticket_data['priority']}")
-        print(f"   Expected routing: {predict_routing(ticket_data)}")
-        
-        ticket_id = create_test_ticket(ticket_data, auth_token)
-        if ticket_id:
-            created_tickets.append(ticket_id)
-        
-        # Small delay between requests
-        time.sleep(1)
-    
-    print(f"\n📊 Summary: Created {len(created_tickets)} test tickets")
-    print("\n🔍 Expected Routing Results:")
-    print("- Urgent tickets → bilalkwj@amazon.com")
-    print("- Password/Auth tickets → support-password@example.com")
-    print("- Billing tickets → billing-support@example.com")
-    print("- Technical tickets → tech-support@example.com")
-    print("- General tickets → general-support@example.com")
-    
-    return created_tickets
-
-def predict_routing(ticket_data):
-    """Predict which team should receive the ticket"""
-    if ticket_data['priority'] == 'urgent':
-        return "Urgent Team (bilalkwj@amazon.com)"
-    
-    content = f"{ticket_data['subject']} {ticket_data['description']}".lower()
-    
-    if any(keyword in content for keyword in ['password', 'login', 'auth', 'authentication']):
-        return "Password Reset Team"
-    elif any(keyword in content for keyword in ['billing', 'payment', 'charge', 'subscription']):
-        return "Billing Team"
-    elif any(keyword in content for keyword in ['api', 'database', 'connection', 'timeout', 'error']):
-        return "Technical Team"
-    else:
-        return "General Support Team"
-
-def test_sns_topics():
-    """Test SNS topic configuration"""
-    print("\n🔧 Testing SNS Topic Configuration")
-    print("=" * 40)
-    
+    # Get the main SNS topic ARN (you'll need to update this)
     try:
-        import boto3
+        ssm = boto3.client('ssm', region_name='eu-west-2')
+        topic_arn = ssm.get_parameter(Name='/saas-platform/notifications/sns_topic_arn')['Parameter']['Value']
+    except Exception as e:
+        print(f"❌ Could not get SNS topic ARN: {e}")
+        print("Please ensure the infrastructure is deployed and try again.")
+        return
+    
+    # Test cases for different routing scenarios
+    test_tickets = [
+        {
+            "ticket_id": str(uuid.uuid4()),
+            "subject": "URGENT: System Down",
+            "description": "The entire system is not responding and customers cannot access their accounts",
+            "priority": "urgent",
+            "tenant_id": "test-tenant-1",
+            "created_by": "test-user",
+            "created_at": datetime.utcnow().isoformat(),
+            "expected_route": "urgent"
+        },
+        {
+            "ticket_id": str(uuid.uuid4()),
+            "subject": "Password Reset Not Working",
+            "description": "Users are unable to reset their passwords. The reset email is not being sent.",
+            "priority": "high",
+            "tenant_id": "test-tenant-2",
+            "created_by": "test-user",
+            "created_at": datetime.utcnow().isoformat(),
+            "expected_route": "password_reset"
+        },
+        {
+            "ticket_id": str(uuid.uuid4()),
+            "subject": "Billing Question",
+            "description": "Customer was charged twice for their subscription this month. Need to process refund.",
+            "priority": "medium",
+            "tenant_id": "test-tenant-3",
+            "created_by": "test-user",
+            "created_at": datetime.utcnow().isoformat(),
+            "expected_route": "billing"
+        },
+        {
+            "ticket_id": str(uuid.uuid4()),
+            "subject": "API Error 500",
+            "description": "The API is returning 500 errors for database connections. Server logs show timeout issues.",
+            "priority": "high",
+            "tenant_id": "test-tenant-4",
+            "created_by": "test-user",
+            "created_at": datetime.utcnow().isoformat(),
+            "expected_route": "technical"
+        },
+        {
+            "ticket_id": str(uuid.uuid4()),
+            "subject": "Feature Request",
+            "description": "Would like to see more detailed analytics in the dashboard with export functionality.",
+            "priority": "low",
+            "tenant_id": "test-tenant-5",
+            "created_by": "test-user",
+            "created_at": datetime.utcnow().isoformat(),
+            "expected_route": "general"
+        }
+    ]
+    
+    print("🧪 Testing Intelligent SNS Notification Routing")
+    print("=" * 60)
+    print(f"SNS Topic ARN: {topic_arn}")
+    print()
+    
+    for i, ticket in enumerate(test_tickets, 1):
+        print(f"📧 Test {i}: {ticket['subject']}")
+        print(f"   Priority: {ticket['priority']}")
+        print(f"   Expected Route: {ticket['expected_route']}")
+        
+        try:
+            # Publish to main SNS topic
+            response = sns.publish(
+                TopicArn=topic_arn,
+                Subject=f"Test Ticket: {ticket['subject']}",
+                Message=json.dumps(ticket, indent=2),
+                MessageAttributes={
+                    'priority': {
+                        'DataType': 'String',
+                        'StringValue': ticket['priority']
+                    },
+                    'ticket_id': {
+                        'DataType': 'String',
+                        'StringValue': ticket['ticket_id']
+                    },
+                    'test': {
+                        'DataType': 'String',
+                        'StringValue': 'true'
+                    }
+                }
+            )
+            
+            print(f"   ✅ Published successfully (MessageId: {response['MessageId']})")
+            
+        except Exception as e:
+            print(f"   ❌ Failed to publish: {e}")
+        
+        print()
+    
+    print("🎯 Test Results:")
+    print("Check your email inboxes for the following expected notifications:")
+    print("• bilalkwj@amazon.com - Should receive URGENT ticket")
+    print("• support-password@example.com - Should receive password reset ticket")
+    print("• billing-support@example.com - Should receive billing question")
+    print("• tech-support@example.com - Should receive API error ticket")
+    print("• general-support@example.com - Should receive feature request")
+    print()
+    print("📋 Note: You may need to confirm SNS email subscriptions first!")
+    print("Check AWS SNS Console for subscription confirmations.")
+
+def check_sns_subscriptions():
+    """Check the status of SNS topic subscriptions"""
+    try:
         sns = boto3.client('sns', region_name='eu-west-2')
         
-        # List topics to verify they exist
+        # List all topics
         topics = sns.list_topics()
-        saas_topics = [topic for topic in topics['Topics'] 
-                      if 'saas-platform' in topic['TopicArn']]
         
-        print(f"✅ Found {len(saas_topics)} SaaS platform SNS topics:")
-        for topic in saas_topics:
-            topic_name = topic['TopicArn'].split(':')[-1]
-            print(f"   - {topic_name}")
-            
-            # Check subscriptions
-            subs = sns.list_subscriptions_by_topic(TopicArn=topic['TopicArn'])
-            print(f"     Subscriptions: {len(subs['Subscriptions'])}")
-            
-    except Exception as e:
-        print(f"❌ Error checking SNS topics: {e}")
-        print("   Make sure AWS credentials are configured and topics are deployed")
-
-def test_lambda_function():
-    """Test Lambda function configuration"""
-    print("\n⚡ Testing Lambda Function Configuration")
-    print("=" * 45)
-    
-    try:
-        import boto3
-        lambda_client = boto3.client('lambda', region_name='eu-west-2')
+        print("📊 SNS Topic Subscription Status")
+        print("=" * 50)
         
-        function_name = 'saas-platform-ticket-router'
-        
-        # Get function configuration
-        response = lambda_client.get_function(FunctionName=function_name)
-        
-        print(f"✅ Lambda function '{function_name}' found")
-        print(f"   Runtime: {response['Configuration']['Runtime']}")
-        print(f"   Timeout: {response['Configuration']['Timeout']}s")
-        
-        # Check environment variables
-        env_vars = response['Configuration'].get('Environment', {}).get('Variables', {})
-        expected_vars = [
-            'URGENT_TOPIC_ARN',
-            'PASSWORD_RESET_TOPIC_ARN', 
-            'BILLING_TOPIC_ARN',
-            'TECHNICAL_TOPIC_ARN',
-            'GENERAL_TOPIC_ARN'
-        ]
-        
-        for var in expected_vars:
-            if var in env_vars:
-                print(f"   ✅ {var}: configured")
-            else:
-                print(f"   ❌ {var}: missing")
+        for topic in topics['Topics']:
+            topic_arn = topic['TopicArn']
+            if 'saas-platform' in topic_arn:
+                topic_name = topic_arn.split(':')[-1]
+                print(f"\n🔔 {topic_name}")
                 
+                # Get subscriptions for this topic
+                subscriptions = sns.list_subscriptions_by_topic(TopicArn=topic_arn)
+                
+                if subscriptions['Subscriptions']:
+                    for sub in subscriptions['Subscriptions']:
+                        status = sub.get('SubscriptionArn', 'PendingConfirmation')
+                        endpoint = sub['Endpoint']
+                        protocol = sub['Protocol']
+                        
+                        if status == 'PendingConfirmation':
+                            print(f"   ⏳ {protocol}:{endpoint} - Pending Confirmation")
+                        else:
+                            print(f"   ✅ {protocol}:{endpoint} - Confirmed")
+                else:
+                    print("   📭 No subscriptions")
+        
+        print("\n💡 To confirm email subscriptions:")
+        print("1. Check your email inboxes for AWS SNS confirmation emails")
+        print("2. Click the 'Confirm subscription' link in each email")
+        print("3. Re-run this script to verify confirmations")
+        
     except Exception as e:
-        print(f"❌ Error checking Lambda function: {e}")
-        print("   Make sure the Lambda function is deployed")
-
-def main():
-    """Main test function"""
-    print("🚀 SaaS Platform SNS Notification System Test")
-    print("=" * 60)
-    print(f"Test started at: {datetime.now().isoformat()}")
-    
-    # Test infrastructure
-    test_sns_topics()
-    test_lambda_function()
-    
-    # Test ticket creation and routing
-    created_tickets = test_ticket_routing()
-    
-    print("\n" + "=" * 60)
-    print("📧 Check your email inboxes for notifications:")
-    print("- bilalkwj@amazon.com (urgent tickets)")
-    print("- support-password@example.com (password issues)")
-    print("- billing-support@example.com (billing questions)")
-    print("- tech-support@example.com (technical issues)")
-    print("- general-support@example.com (general questions)")
-    
-    print(f"\n✅ Test completed at: {datetime.now().isoformat()}")
-    print(f"📊 Total tickets created: {len(created_tickets)}")
+        print(f"❌ Error checking subscriptions: {e}")
 
 if __name__ == "__main__":
-    main()
+    import sys
+    
+    if len(sys.argv) > 1 and sys.argv[1] == "--check-subscriptions":
+        check_sns_subscriptions()
+    else:
+        test_notification_routing()
+        print("\n" + "="*60)
+        print("💡 To check subscription status, run:")
+        print("   python3 test_notifications.py --check-subscriptions")

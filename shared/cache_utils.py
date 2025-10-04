@@ -16,7 +16,8 @@ class ValkeyCache:
     """Valkey (Redis) cache client with connection pooling and error handling"""
     
     def __init__(self):
-        self.ssm_client = boto3.client('ssm', region_name='eu-west-2')
+        self.region = os.environ.get('AWS_DEFAULT_REGION', 'eu-west-2')
+        self.ssm_client = boto3.client('ssm', region_name=self.region)
         self._redis_client = None
         self._reader_client = None
         
@@ -152,7 +153,8 @@ class DAXCache:
     """DynamoDB Accelerator (DAX) cache client"""
     
     def __init__(self):
-        self.ssm_client = boto3.client('ssm', region_name='eu-west-2')
+        self.region = os.environ.get('AWS_DEFAULT_REGION', 'eu-west-2')
+        self.ssm_client = boto3.client('ssm', region_name=self.region)
         self._dax_client = None
         self._dynamodb_client = None
         
@@ -167,7 +169,7 @@ class DAXCache:
                 if dax_endpoint:
                     self._dax_client = amazondax.AmazonDaxClient.resource(
                         endpoint_url=f'dax://{dax_endpoint}',
-                        region_name='eu-west-2'
+                        region_name=self.region
                     )
                     logger.info("Connected to DAX cluster")
                 else:
@@ -178,7 +180,7 @@ class DAXCache:
                 self._dax_client = boto3.resource('dynamodb', region_name='eu-west-2')
             except Exception as e:
                 logger.warning(f"Could not connect to DAX: {e}, using DynamoDB directly")
-                self._dax_client = boto3.resource('dynamodb', region_name='eu-west-2')
+                self._dax_client = boto3.resource('dynamodb', region_name=self.region)
         
         return self._dax_client
     
@@ -202,7 +204,7 @@ class DAXCache:
             logger.error(f"Failed to get table {table_name}: {e}")
             # Fallback to direct DynamoDB
             if self._dynamodb_client is None:
-                self._dynamodb_client = boto3.resource('dynamodb', region_name='eu-west-2')
+                self._dynamodb_client = boto3.resource('dynamodb', region_name=self.region)
             return self._dynamodb_client.Table(table_name)
 
 # Global cache instances

@@ -43,12 +43,23 @@ output "elasticache_security_group_id" {
   value       = aws_security_group.elasticache.id
 }
 
+output "nat_gateway_ids" {
+  description = "IDs of the NAT Gateways"
+  value       = aws_nat_gateway.main[*].id
+}
+
+output "nat_gateway_public_ips" {
+  description = "Public IPs of the NAT Gateways"
+  value       = aws_eip.nat[*].public_ip
+}
+
+# Backward compatibility
 output "nat_gateway_id" {
-  description = "ID of the NAT Gateway"
-  value       = aws_nat_gateway.main.id
+  description = "ID of the first NAT Gateway (for backward compatibility)"
+  value       = aws_nat_gateway.main[0].id
 }
 
 output "nat_gateway_public_ip" {
-  description = "Public IP of the NAT Gateway"
-  value       = aws_eip.nat.public_ip
+  description = "Public IP of the first NAT Gateway (for backward compatibility)"
+  value       = aws_eip.nat[0].public_ip
 }

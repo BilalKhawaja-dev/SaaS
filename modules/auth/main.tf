@@ -95,12 +95,12 @@ resource "aws_cognito_user_pool_client" "main" {
   supported_identity_providers = ["COGNITO"]
   
   callback_urls = [
-    "https://${var.api_gateway_domain}/callback",
+    "https://example.com/callback",
     "http://localhost:3000/callback"  # For local development
   ]
   
   logout_urls = [
-    "https://${var.api_gateway_domain}/logout",
+    "https://example.com/logout",
     "http://localhost:3000/logout"   # For local development
   ]
   

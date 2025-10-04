@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 class JWTValidator:
     def __init__(self):
-        self.secrets_client = boto3.client('secretsmanager', region_name='eu-west-2')
-        self.ssm_client = boto3.client('ssm', region_name='eu-west-2')
+        self.region = os.environ.get('AWS_DEFAULT_REGION', 'eu-west-2')
+        self.secrets_client = boto3.client('secretsmanager', region_name=self.region)
+        self.ssm_client = boto3.client('ssm', region_name=self.region)
         self._jwt_secret = None
         self._cognito_jwks_client = None
         
@@ -48,8 +49,7 @@ class JWTValidator:
                         Name='/saas-platform/cognito/user_pool_id'
                     )['Parameter']['Value']
                 
-                region = os.environ.get('AWS_REGION', 'eu-west-2')
-                jwks_url = f"https://cognito-idp.{region}.amazonaws.com/{user_pool_id}/.well-known/jwks.json"
+                jwks_url = f"https://cognito-idp.{self.region}.amazonaws.com/{user_pool_id}/.well-known/jwks.json"
                 self._cognito_jwks_client = PyJWKClient(jwks_url)
             except Exception as e:
                 logger.error(f"Failed to initialize Cognito JWKS client: {e}")

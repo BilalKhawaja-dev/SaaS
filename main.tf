@@ -105,7 +105,7 @@ module "auth" {
 
   project_name       = var.project_name
   api_gateway_domain = "placeholder.execute-api.${var.region}.amazonaws.com"
-  create_demo_users  = false  # Set to false since users already exist
+  create_demo_users  = true   # Enable demo users for testing
   tags              = var.tags
 }
 

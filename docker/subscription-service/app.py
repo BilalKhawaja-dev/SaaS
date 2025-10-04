@@ -10,11 +10,32 @@ from datetime import datetime, timedelta
 import os
 from functools import wraps
 import logging
+import psycopg2
 
 # Add shared utilities to path
 sys.path.append('/app/shared')
 from jwt_utils import token_required, get_current_user
 from cache_utils import get_valkey_client, cache_key, tenant_cache_key
+
+def handle_errors(f):
+    """Decorator for consistent error handling across all endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except psycopg2.OperationalError as e:
+            logger.error(f"Database connection error in {f.__name__}: {e}")
+            return jsonify({'success': False, 'error': 'Database connection failed. Please try again.'}), 503
+        except psycopg2.IntegrityError as e:
+            logger.error(f"Database integrity error in {f.__name__}: {e}")
+            return jsonify({'success': False, 'error': 'Data integrity error. Please check your input.'}), 400
+        except ValueError as e:
+            logger.error(f"Validation error in {f.__name__}: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.error(f"Unexpected error in {f.__name__}: {e}")
+            return jsonify({'success': False, 'error': 'An unexpected error occurred. Please try again.'}), 500
+    return decorated_function
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,32 +43,56 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# AWS clients
-ssm = boto3.client('ssm', region_name='eu-west-2')
-secrets = boto3.client('secretsmanager', region_name='eu-west-2')
-cognito = boto3.client('cognito-idp', region_name='eu-west-2')
+# Get region from environment
+AWS_REGION = os.environ.get('AWS_DEFAULT_REGION', 'eu-west-2')
 
-def get_db_connection():
-    """Get database connection with connection pooling via RDS Proxy"""
-    try:
-        # Get DB credentials from Secrets Manager
-        secret_response = secrets.get_secret_value(SecretId='saas-platform/database/password')
-        secret = json.loads(secret_response['SecretString'])
-        
-        # Get DB endpoint from SSM (RDS Proxy endpoint)
-        db_endpoint = ssm.get_parameter(Name='/saas-platform/database/endpoint')['Parameter']['Value']
-        db_name = ssm.get_parameter(Name='/saas-platform/database/name')['Parameter']['Value']
-        
-        return psycopg2.connect(
-            host=db_endpoint.split(':')[0],
-            database=db_name,
-            user=secret['username'],
-            password=secret['password'],
-            connect_timeout=10
-        )
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        raise
+# AWS clients
+ssm = boto3.client('ssm', region_name=AWS_REGION)
+secrets = boto3.client('secretsmanager', region_name=AWS_REGION)
+cognito = boto3.client('cognito-idp', region_name=AWS_REGION)
+
+def get_db_connection(max_retries=3, retry_delay=1):
+    """Get database connection with connection pooling via RDS Proxy and retry logic"""
+    import time
+    
+    for attempt in range(max_retries):
+        try:
+            # Get DB credentials from Secrets Manager
+            secret_response = secrets.get_secret_value(SecretId='saas-platform/database/password')
+            secret = json.loads(secret_response['SecretString'])
+            
+            # Get DB endpoint from SSM (RDS Proxy endpoint)
+            db_endpoint = ssm.get_parameter(Name='/saas-platform/database/endpoint')['Parameter']['Value']
+            db_name = ssm.get_parameter(Name='/saas-platform/database/name')['Parameter']['Value']
+            
+            # Create connection with proper error handling
+            conn = psycopg2.connect(
+                host=db_endpoint.split(':')[0],
+                database=db_name,
+                user=secret['username'],
+                password=secret['password'],
+                connect_timeout=30,
+                application_name='subscription-service'
+            )
+            
+            # Test the connection
+            with conn.cursor() as cur:
+                cur.execute('SELECT 1')
+                cur.fetchone()
+            
+            logger.info(f"Database connection established on attempt {attempt + 1}")
+            return conn
+            
+        except psycopg2.OperationalError as e:
+            logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
+            else:
+                logger.error(f"All {max_retries} database connection attempts failed")
+                raise
+        except Exception as e:
+            logger.error(f"Unexpected database connection error: {e}")
+            raise
 
 def cache_get(key):
     """Get value from cache with error handling"""
@@ -124,6 +169,91 @@ def health():
         'timestamp': datetime.utcnow().isoformat()
     })
 
+@app.route('/signup', methods=['POST'])
+def simple_signup():
+    """Simple signup that sends SNS notification to admin"""
+    data = request.json
+    
+    if not data or not data.get('email') or not data.get('company'):
+        return jsonify({'error': 'Email and company required'}), 400
+    
+    try:
+        # Send SNS notification to admin
+        sns = boto3.client('sns', region_name=AWS_REGION)
+        
+        message = {
+            "alert": "NEW SUBSCRIPTION REQUEST",
+            "email": data['email'],
+            "company": data['company'],
+            "plan": data.get('plan', 'basic'),
+            "phone": data.get('phone', 'Not provided'),
+            "message": data.get('message', 'No additional message'),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        sns.publish(
+            TopicArn='arn:aws:sns:eu-west-2:981686514879:saas-platform-support-tickets',
+            Subject=f"🆕 New Subscription Request: {data['company']}",
+            Message=json.dumps(message, indent=2)
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Subscription request sent! Admin will contact you soon.',
+            'email': data['email'],
+            'company': data['company']
+        })
+        
+    except Exception as e:
+        logger.error(f"Signup notification failed: {e}")
+        return jsonify({'error': 'Failed to send request'}), 500
+
+@app.route('/check-subscription', methods=['POST'])
+def check_subscription():
+    """Check subscription time left for a user - demo version"""
+    data = request.json
+    
+    if not data or not data.get('email'):
+        return jsonify({'error': 'Email required'}), 400
+    
+    # Demo data without database
+    demo_users = {
+        'admin@democorp.com': {
+            'company': 'Demo Corp',
+            'plan': 'pro',
+            'status': 'active',
+            'monthly_cost': 99.00,
+            'days_left': 25,
+            'expires_on': '2025-10-29'
+        },
+        'user@testinc.com': {
+            'company': 'Test Inc',
+            'plan': 'basic',
+            'status': 'active',
+            'monthly_cost': 29.00,
+            'days_left': 15,
+            'expires_on': '2025-10-19'
+        },
+        'readonly@enterpriseltd.com': {
+            'company': 'Enterprise Ltd',
+            'plan': 'enterprise',
+            'status': 'active',
+            'monthly_cost': 299.00,
+            'days_left': 30,
+            'expires_on': '2025-11-03'
+        }
+    }
+    
+    user_info = demo_users.get(data['email'])
+    if not user_info:
+        return jsonify({'error': 'User not found'}), 404
+    
+    return jsonify({
+        'success': True,
+        'email': data['email'],
+        **user_info
+    })
+
 @app.route('/health/detailed')
 def health_detailed():
     """Detailed health check endpoint"""
@@ -161,27 +291,76 @@ def health_detailed():
     
     return jsonify(health_status)
 
+def validate_email(email):
+    """Validate email format"""
+    import re
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def validate_password(password):
+    """Validate password strength"""
+    import re
+    if len(password) < 12:
+        return False, "Password must be at least 12 characters"
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least one special character"
+    return True, "Password is valid"
+
+def validate_company_name(company):
+    """Validate company name"""
+    if not company or len(company.strip()) < 2:
+        return False, "Company name must be at least 2 characters"
+    if len(company) > 100:
+        return False, "Company name must be less than 100 characters"
+    # Check for potentially malicious content
+    import re
+    if re.search(r'[<>"\']', company):
+        return False, "Company name contains invalid characters"
+    return True, "Company name is valid"
+
 @app.route('/api/subscription/signup', methods=['POST'])
+@handle_errors
 def signup():
     """User registration and subscription creation with Cognito integration"""
-    data = request.json
-    
-    # Validate required fields
-    required_fields = ['email', 'password', 'company', 'plan']
-    for field in required_fields:
-        if not data.get(field):
-            return jsonify({'success': False, 'message': f'{field} is required'}), 400
-    
-    # Validate plan
-    valid_plans = ['basic', 'pro', 'enterprise']
-    if data['plan'] not in valid_plans:
-        return jsonify({'success': False, 'message': 'Invalid subscription plan'}), 400
-    
-    # Validate password strength
-    if len(data['password']) < 8:
-        return jsonify({'success': False, 'message': 'Password must be at least 8 characters'}), 400
-    
     try:
+        data = request.json
+        
+        # Validate JSON payload exists
+        if not data:
+            return jsonify({'success': False, 'message': 'Invalid JSON payload'}), 400
+        
+        # Validate required fields
+        required_fields = ['email', 'password', 'company', 'plan']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} is required'}), 400
+        
+        # Validate email format
+        if not validate_email(data['email']):
+            return jsonify({'success': False, 'message': 'Invalid email format'}), 400
+        
+        # Validate password strength
+        password_valid, password_message = validate_password(data['password'])
+        if not password_valid:
+            return jsonify({'success': False, 'message': password_message}), 400
+        
+        # Validate company name
+        company_valid, company_message = validate_company_name(data['company'])
+        if not company_valid:
+            return jsonify({'success': False, 'message': company_message}), 400
+        
+        # Validate plan
+        valid_plans = ['basic', 'pro', 'enterprise']
+        if data['plan'] not in valid_plans:
+            return jsonify({'success': False, 'message': f'Invalid subscription plan. Must be one of: {", ".join(valid_plans)}'}), 400
+        
+        conn = get_db_connection()
         conn = get_db_connection()
         cur = conn.cursor()
         
@@ -200,12 +379,21 @@ def signup():
         tenant_id = cur.fetchone()[0]
         
         # Create user in Cognito
-        cognito_user_id = create_cognito_user(
-            data['email'], 
-            data['password'], 
-            tenant_id, 
-            data['company']
-        )
+        try:
+            cognito_user_id = create_cognito_user(
+                data['email'], 
+                data['password'], 
+                tenant_id, 
+                data['company']
+            )
+        except Exception as e:
+            logger.error(f"Cognito user creation failed: {e}")
+            # Rollback tenant creation
+            cur.execute('DELETE FROM tenants WHERE id = %s', (tenant_id,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return jsonify({'success': False, 'message': f'User creation failed: {str(e)}'}), 500
         
         # Hash password for local storage (backup)
         password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -267,6 +455,7 @@ def signup():
 
 @app.route('/api/subscription/status', methods=['GET'])
 @token_required()
+@handle_errors
 def get_subscription_status():
     """Get subscription status for current tenant"""
     try:
@@ -321,6 +510,7 @@ def get_subscription_status():
 
 @app.route('/api/subscription/update', methods=['PUT'])
 @token_required()
+@handle_errors
 def update_subscription():
     """Update subscription plan"""
     data = request.json
@@ -400,6 +590,7 @@ def update_subscription():
 
 @app.route('/api/subscription/billing', methods=['GET'])
 @token_required()
+@handle_errors
 def get_billing_history():
     """Get billing history and transactions for current tenant"""
     try:
@@ -471,6 +662,7 @@ def get_billing_history():
 
 @app.route('/api/subscription/balance', methods=['GET'])
 @token_required()
+@handle_errors
 def get_account_balance():
     """Get current account balance"""
     try:

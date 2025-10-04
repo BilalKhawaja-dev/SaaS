@@ -12,9 +12,9 @@ resource "aws_lb" "nlb" {
 
 # Target Groups for each service
 resource "aws_lb_target_group" "frontend" {
-  name     = "${var.project_name}-fe-http"
+  name_prefix = "fe-"
   port     = 5002
-  protocol = "HTTP"
+  protocol = "TCP"
   vpc_id   = var.vpc_id
   target_type = "instance"
 
@@ -22,21 +22,23 @@ resource "aws_lb_target_group" "frontend" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
-    path                = "/health"
-    port                = "5002"
-    protocol            = "HTTP"
+    port                = "traffic-port"
+    protocol            = "TCP"
     timeout             = 10
-    unhealthy_threshold = 5
-    matcher             = "200"
+    unhealthy_threshold = 3
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 
   tags = var.tags
 }
 
 resource "aws_lb_target_group" "subscription" {
-  name     = "${var.project_name}-sub-http"
+  name_prefix = "sub-"
   port     = 5000
-  protocol = "HTTP"
+  protocol = "TCP"
   vpc_id   = var.vpc_id
   target_type = "instance"
 
@@ -44,21 +46,25 @@ resource "aws_lb_target_group" "subscription" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
-    path                = "/health"
-    port                = "5000"
+    port                = "traffic-port"
     protocol            = "HTTP"
+    path                = "/health"
     timeout             = 10
-    unhealthy_threshold = 5
+    unhealthy_threshold = 2
     matcher             = "200"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 
   tags = var.tags
 }
 
 resource "aws_lb_target_group" "support" {
-  name     = "${var.project_name}-sup-http"
+  name_prefix = "sup-"
   port     = 5001
-  protocol = "HTTP"
+  protocol = "TCP"
   vpc_id   = var.vpc_id
   target_type = "instance"
 
@@ -66,22 +72,26 @@ resource "aws_lb_target_group" "support" {
     enabled             = true
     healthy_threshold   = 2
     interval            = 30
-    path                = "/health"
-    port                = "5001"
+    port                = "traffic-port"
     protocol            = "HTTP"
+    path                = "/health"
     timeout             = 10
-    unhealthy_threshold = 5
+    unhealthy_threshold = 2
     matcher             = "200"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 
   tags = var.tags
 }
 
-# NLB Listeners
+# NLB Listeners (must be TCP for NLB)
 resource "aws_lb_listener" "frontend" {
   load_balancer_arn = aws_lb.nlb.arn
   port              = "5002"
-  protocol          = "HTTP"
+  protocol          = "TCP"
 
   default_action {
     type             = "forward"
@@ -92,7 +102,7 @@ resource "aws_lb_listener" "frontend" {
 resource "aws_lb_listener" "subscription" {
   load_balancer_arn = aws_lb.nlb.arn
   port              = "5000"
-  protocol          = "HTTP"
+  protocol          = "TCP"
 
   default_action {
     type             = "forward"
@@ -103,7 +113,7 @@ resource "aws_lb_listener" "subscription" {
 resource "aws_lb_listener" "support" {
   load_balancer_arn = aws_lb.nlb.arn
   port              = "5001"
-  protocol          = "HTTP"
+  protocol          = "TCP"
 
   default_action {
     type             = "forward"
@@ -185,6 +195,81 @@ resource "aws_api_gateway_integration" "root_get" {
   type                    = "HTTP_PROXY"
   integration_http_method = "GET"
   uri                     = "http://${aws_lb.nlb.dns_name}:5002/"
+  connection_type         = "VPC_LINK"
+  connection_id           = aws_api_gateway_vpc_link.main.id
+}
+
+# Signup endpoint (no auth)
+resource "aws_api_gateway_resource" "signup" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "signup"
+}
+
+resource "aws_api_gateway_method" "signup_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.signup.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "signup_post" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.signup.id
+  http_method             = aws_api_gateway_method.signup_post.http_method
+  type                    = "HTTP_PROXY"
+  integration_http_method = "POST"
+  uri                     = "http://${aws_lb.nlb.dns_name}:5000/signup"
+  connection_type         = "VPC_LINK"
+  connection_id           = aws_api_gateway_vpc_link.main.id
+}
+
+# Check subscription endpoint (no auth)
+resource "aws_api_gateway_resource" "check_subscription" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "check-subscription"
+}
+
+resource "aws_api_gateway_method" "check_subscription_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.check_subscription.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "check_subscription_post" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.check_subscription.id
+  http_method             = aws_api_gateway_method.check_subscription_post.http_method
+  type                    = "HTTP_PROXY"
+  integration_http_method = "POST"
+  uri                     = "http://${aws_lb.nlb.dns_name}:5000/check-subscription"
+  connection_type         = "VPC_LINK"
+  connection_id           = aws_api_gateway_vpc_link.main.id
+}
+
+# Create ticket endpoint (no auth)
+resource "aws_api_gateway_resource" "create_ticket" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "create-ticket"
+}
+
+resource "aws_api_gateway_method" "create_ticket_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.create_ticket.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "create_ticket_post" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.create_ticket.id
+  http_method             = aws_api_gateway_method.create_ticket_post.http_method
+  type                    = "HTTP_PROXY"
+  integration_http_method = "POST"
+  uri                     = "http://${aws_lb.nlb.dns_name}:5001/create-ticket"
   connection_type         = "VPC_LINK"
   connection_id           = aws_api_gateway_vpc_link.main.id
 }
@@ -285,7 +370,10 @@ resource "aws_api_gateway_deployment" "main" {
   depends_on = [
     aws_api_gateway_integration.root_get,
     aws_api_gateway_integration.subscription_any,
-    aws_api_gateway_integration.support_any
+    aws_api_gateway_integration.support_any,
+    aws_api_gateway_integration.signup_post,
+    aws_api_gateway_integration.check_subscription_post,
+    aws_api_gateway_integration.create_ticket_post
   ]
 
   rest_api_id = aws_api_gateway_rest_api.main.id

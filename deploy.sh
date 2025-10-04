@@ -1,22 +1,31 @@
 #!/bin/bash
 
+set -euo pipefail
+
 echo "🚀 Deploying Multi-AZ SaaS Platform..."
+
+# Error handling function
+handle_error() {
+    echo "❌ Error occurred at line $1"
+    exit 1
+}
+
+trap 'handle_error $LINENO' ERR
 
 # Check if terraform.tfvars exists
 if [ ! -f "terraform.tfvars" ]; then
     echo "📝 Creating terraform.tfvars from example..."
-    cp terraform.tfvars.example terraform.tfvars
+    cp terraform.tfvars.example terraform.tfvars || { echo "❌ Failed to copy terraform.tfvars.example"; exit 1; }
     echo "✅ Please review terraform.tfvars and update any values as needed"
 fi
 
 # Build Lambda packages
 echo "📦 Building Lambda packages..."
-if [ -f "modules/api/build_authorizer.sh" ]; then
-    ./modules/api/build_authorizer.sh
-fi
-
-if [ -f "modules/auth/build_token_customizer.sh" ]; then
-    ./modules/auth/build_token_customizer.sh
+if [ -f "build_lambda_packages.sh" ]; then
+    chmod +x build_lambda_packages.sh
+    ./build_lambda_packages.sh || { echo "❌ Lambda package build failed"; exit 1; }
+else
+    echo "⚠️ build_lambda_packages.sh not found, skipping"
 fi
 
 # Initialize Terraform
@@ -48,6 +57,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     
     echo ""
     echo "🎉 Deployment complete!"
+    echo ""
+    echo "🔍 Running post-deployment validation..."
+    python3 validate_fixes.py
+    
     echo ""
     echo "📊 Infrastructure Outputs:"
     terraform output

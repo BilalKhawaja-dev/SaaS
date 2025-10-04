@@ -55,18 +55,59 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
         Effect = "Allow"
         Action = [
           "s3:GetObject",
-          "s3:PutObject",
+          "s3:PutObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.project_name}-*/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
           "dynamodb:DeleteItem",
           "dynamodb:Query",
           "dynamodb:Scan",
-          "dynamodb:DescribeTable",
-          "secretsmanager:GetSecretValue",
+          "dynamodb:DescribeTable"
+        ]
+        Resource = [
+          "arn:aws:dynamodb:*:*:table/${var.project_name}-*",
+          "arn:aws:dynamodb:*:*:table/${var.project_name}-*/index/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          "arn:aws:secretsmanager:*:*:secret:${var.project_name}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "ssm:GetParameter",
-          "ssm:GetParameters",
-          "sns:Publish",
+          "ssm:GetParameters"
+        ]
+        Resource = [
+          "arn:aws:ssm:*:*:parameter/${var.project_name}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = [
+          "arn:aws:sns:*:*:${var.project_name}-*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "dax:GetItem",
           "dax:PutItem",
           "dax:UpdateItem",
@@ -74,7 +115,9 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
           "dax:Query",
           "dax:Scan"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:dax:*:*:cache/${var.project_name}-*"
+        ]
       }
     ]
   })

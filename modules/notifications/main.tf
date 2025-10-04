@@ -151,11 +151,11 @@ resource "aws_iam_role_policy" "ticket_router_lambda_policy" {
 
 # Lambda function for intelligent ticket routing
 resource "aws_lambda_function" "ticket_router" {
-  filename         = "ticket_router.zip"
+  filename         = "${path.module}/ticket_router.zip"
   function_name    = "${var.project_name}-ticket-router"
   role            = aws_iam_role.ticket_router_lambda_role.arn
-  handler         = "lambda_function.lambda_handler"
-  runtime         = "python3.9"
+  handler         = "ticket_router.lambda_handler"
+  runtime         = "python3.11"
   timeout         = 30
 
   environment {
@@ -212,16 +212,10 @@ resource "aws_lambda_permission" "allow_sns" {
 # Create Lambda deployment package
 data "archive_file" "ticket_router_zip" {
   type        = "zip"
-  output_path = "ticket_router.zip"
+  output_path = "${path.module}/ticket_router.zip"
   source {
-    content = templatefile("${path.module}/ticket_router.py", {
-      urgent_topic_arn = aws_sns_topic.urgent_tickets.arn
-      password_reset_topic_arn = aws_sns_topic.password_reset_tickets.arn
-      billing_topic_arn = aws_sns_topic.billing_tickets.arn
-      technical_topic_arn = aws_sns_topic.technical_tickets.arn
-      general_topic_arn = aws_sns_topic.general_tickets.arn
-    })
-    filename = "lambda_function.py"
+    content  = file("${path.module}/ticket_router.py")
+    filename = "ticket_router.py"
   }
 }
 

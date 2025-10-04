@@ -64,8 +64,7 @@ resource "aws_rds_cluster" "main" {
   vpc_security_group_ids = [var.rds_security_group_id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
   
-  # Multi-AZ configuration
-  availability_zones = ["eu-west-2a", "eu-west-2b"]
+  # Multi-AZ configuration - let AWS choose AZs
   
   backup_retention_period = 7
   preferred_backup_window = "03:00-04:00"
@@ -94,7 +93,7 @@ resource "aws_rds_cluster_instance" "main" {
   instance_class     = "db.serverless"
   engine            = aws_rds_cluster.main.engine
   engine_version    = aws_rds_cluster.main.engine_version
-  availability_zone  = count.index == 0 ? "eu-west-2a" : "eu-west-2b"
+  # Let AWS choose AZ automatically
   
   tags = merge(var.tags, {
     Name = "${var.project_name}-db-${count.index + 1}"
@@ -310,5 +309,20 @@ resource "aws_ssm_parameter" "dax_endpoint" {
   name  = "/${var.project_name}/cache/dax/endpoint"
   type  = "String"
   value = aws_dax_cluster.main.cluster_address
+  tags  = var.tags
+}
+
+# Store DynamoDB table names in SSM
+resource "aws_ssm_parameter" "tickets_table_name" {
+  name  = "/${var.project_name}/dynamodb/tickets_table_name"
+  type  = "String"
+  value = aws_dynamodb_table.support_tickets.name
+  tags  = var.tags
+}
+
+resource "aws_ssm_parameter" "sessions_table_name" {
+  name  = "/${var.project_name}/dynamodb/sessions_table_name"
+  type  = "String"
+  value = aws_dynamodb_table.user_sessions.name
   tags  = var.tags
 }

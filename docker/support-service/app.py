@@ -14,25 +14,50 @@ sys.path.append('/app/shared')
 from jwt_utils import token_required, get_current_user
 from cache_utils import get_dax_table
 
+def handle_errors(f):
+    """Decorator for consistent error handling across all endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error in {f.__name__}: {e}")
+            return jsonify({'success': False, 'error': 'An unexpected error occurred. Please try again.'}), 500
+    return decorated_function
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Get region from environment
+AWS_REGION = os.environ.get('AWS_DEFAULT_REGION', 'eu-west-2')
+
 # AWS clients
-dynamodb = boto3.resource('dynamodb', region_name='eu-west-2')
-sns = boto3.client('sns', region_name='eu-west-2')
-ssm = boto3.client('ssm', region_name='eu-west-2')
+dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
+sns = boto3.client('sns', region_name=AWS_REGION)
+ssm = boto3.client('ssm', region_name=AWS_REGION)
 
 def get_table():
     """Get DynamoDB table with DAX acceleration"""
     try:
-        return get_dax_table('saas-platform-tickets')
+        # Get table name from environment or SSM
+        table_name = os.environ.get('DYNAMODB_TABLE_NAME')
+        if not table_name:
+            try:
+                response = ssm.get_parameter(Name='/saas-platform/dynamodb/tickets_table_name')
+                table_name = response['Parameter']['Value']
+            except Exception as e:
+                logger.warning(f"Could not get table name from SSM: {e}")
+                table_name = 'saas-platform-tickets'  # Fallback
+        
+        return get_dax_table(table_name)
     except Exception as e:
         logger.error(f"Could not get DAX table: {e}")
         # Fallback to direct DynamoDB
-        return dynamodb.Table('saas-platform-tickets')
+        table_name = os.environ.get('DYNAMODB_TABLE_NAME', 'saas-platform-tickets')
+        return dynamodb.Table(table_name)
 
 def send_urgent_notification(ticket_data):
     """Send SNS notification for urgent tickets"""
@@ -90,6 +115,46 @@ def health():
         'timestamp': datetime.utcnow().isoformat()
     })
 
+@app.route('/create-ticket', methods=['POST'])
+def create_ticket_simple():
+    """Simple ticket creation without auth for demo"""
+    data = request.json
+    
+    if not data or not data.get('subject') or not data.get('description'):
+        return jsonify({'error': 'Subject and description required'}), 400
+    
+    try:
+        table = get_table()
+        ticket_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        
+        # Use demo tenant ID
+        demo_tenant_id = 'demo-tenant-123'
+        
+        item = {
+            'tenant_id': demo_tenant_id,
+            'ticket_id': ticket_id,
+            'subject': data['subject'],
+            'description': data['description'],
+            'status': 'open',
+            'priority': data.get('priority', 'medium'),
+            'created_by': data.get('email', 'demo-user'),
+            'created_at': timestamp,
+            'updated_at': timestamp
+        }
+        
+        table.put_item(Item=item)
+        
+        return jsonify({
+            'success': True,
+            'ticket_id': ticket_id,
+            'message': 'Ticket created successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Create ticket failed: {e}")
+        return jsonify({'error': 'Failed to create ticket'}), 500
+
 @app.route('/health/detailed')
 def health_detailed():
     """Detailed health check endpoint"""
@@ -124,6 +189,7 @@ def health_detailed():
 
 @app.route('/api/support/tickets', methods=['GET'])
 @token_required()
+@handle_errors
 def get_tickets():
     """Get support tickets for current tenant"""
     try:
@@ -166,6 +232,7 @@ def get_tickets():
 
 @app.route('/api/support/tickets', methods=['POST'])
 @token_required()
+@handle_errors
 def create_ticket():
     """Create a new support ticket"""
     try:
@@ -427,72 +494,7 @@ def delete_ticket(ticket_id):
         logger.error(f"Delete ticket failed: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Initialize with demo data if needed
-def init_demo_data():
-    """Initialize demo data for testing"""
-    try:
-        table = get_table()
-        
-        # Demo tenant IDs (these would come from your subscription service)
-        demo_tenants = [
-            'demo-tenant-1',
-            'demo-tenant-2',
-            'demo-tenant-3'
-        ]
-        
-        demo_tickets = [
-            {
-                'subject': 'Login Issues', 
-                'description': 'Cannot access my account after password reset', 
-                'status': 'open',
-                'priority': 'high'
-            },
-            {
-                'subject': 'Billing Question', 
-                'description': 'Need clarification on recent charges', 
-                'status': 'in_progress',
-                'priority': 'medium'
-            },
-            {
-                'subject': 'Feature Request', 
-                'description': 'Would like to see analytics dashboard with more metrics', 
-                'status': 'resolved',
-                'priority': 'low'
-            },
-        ]
-        
-        for tenant_id in demo_tenants:
-            for ticket_data in demo_tickets:
-                ticket_id = str(uuid.uuid4())
-                timestamp = datetime.utcnow().isoformat()
-                
-                item = {
-                    'tenant_id': tenant_id,
-                    'ticket_id': ticket_id,
-                    'subject': ticket_data['subject'],
-                    'description': ticket_data['description'],
-                    'status': ticket_data['status'],
-                    'priority': ticket_data['priority'],
-                    'created_by': 'demo-user',
-                    'created_at': timestamp,
-                    'updated_at': timestamp
-                }
-                
-                # Check if ticket already exists to avoid duplicates
-                try:
-                    existing = table.get_item(Key={'tenant_id': tenant_id, 'ticket_id': ticket_id})
-                    if 'Item' not in existing:
-                        table.put_item(Item=item)
-                except Exception:
-                    # If get_item fails, try to put anyway
-                    table.put_item(Item=item)
-                    
-        logger.info("Demo data initialization completed")
-                    
-    except Exception as e:
-        logger.error(f"Error initializing demo data: {e}")
-
 if __name__ == '__main__':
-    # Initialize demo data on startup
-    init_demo_data()
+    # Start the application
+    logger.info("Starting support service on port 5001")
     app.run(host='0.0.0.0', port=5001, debug=False)

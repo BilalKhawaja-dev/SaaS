@@ -108,10 +108,11 @@ def run_migrations():
         # Get migrations directory
         migrations_dir = Path(__file__).parent
         
-        # Get all SQL migration files
+        # Get all SQL migration files (prevent path traversal)
         migration_files = sorted([
             f for f in migrations_dir.glob('*.sql')
-            if f.name.startswith(('001_', '002_', '003_', '004_', '005_', '006_', '007_', '008_', '009_'))
+            if (f.name.startswith(('001_', '002_', '003_', '004_', '005_', '006_', '007_', '008_', '009_')) 
+                and '..' not in str(f) and f.is_file())
         ])
         
         if not migration_files:
