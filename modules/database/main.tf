@@ -7,7 +7,8 @@ resource "random_password" "db_password" {
 
 # Store password in Secrets Manager
 resource "aws_secretsmanager_secret" "db_password" {
-  name = "${var.project_name}/database/password${var.deployment_id != "" ? "-${var.deployment_id}" : ""}"
+  name = "${var.project_name}/database/password${var.deployment_id != "" ? "-${var.deployment_id}" : ""}-${formatdate("YYYYMMDD-hhmm", timestamp())}"
+  recovery_window_in_days = 0
   tags = var.tags
 }
 
