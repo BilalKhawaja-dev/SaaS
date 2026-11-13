@@ -45,13 +45,13 @@ resource "aws_autoscaling_group" "ecs" {
   min_size            = 1
   max_size            = 3
   desired_capacity    = 1
-  
+
   target_group_arns = [
     var.nlb_target_group_frontend_arn,
     var.nlb_target_group_subscription_arn,
     var.nlb_target_group_support_arn
   ]
-  
+
   health_check_type         = "ELB"
   health_check_grace_period = 900
 
@@ -81,7 +81,7 @@ resource "aws_autoscaling_policy" "scale_up" {
   name                   = "${var.project_name}-scale-up"
   scaling_adjustment     = 1
   adjustment_type        = "ChangeInCapacity"
-  cooldown              = 300
+  cooldown               = 300
   autoscaling_group_name = aws_autoscaling_group.ecs.name
 }
 
@@ -90,7 +90,7 @@ resource "aws_autoscaling_policy" "scale_down" {
   name                   = "${var.project_name}-scale-down"
   scaling_adjustment     = -1
   adjustment_type        = "ChangeInCapacity"
-  cooldown              = 300
+  cooldown               = 300
   autoscaling_group_name = aws_autoscaling_group.ecs.name
 }
 
@@ -174,7 +174,7 @@ resource "aws_ecs_task_definition" "frontend" {
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
   execution_role_arn       = var.ecs_execution_role_arn
-  task_role_arn           = var.ecs_task_role_arn
+  task_role_arn            = var.ecs_task_role_arn
 
   container_definitions = jsonencode([
     {
@@ -190,10 +190,10 @@ resource "aws_ecs_task_definition" "frontend" {
       ]
       essential = true
       healthCheck = {
-        command = ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
-        interval = 30
-        timeout = 10
-        retries = 3
+        command     = ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+        interval    = 30
+        timeout     = 10
+        retries     = 3
         startPeriod = 30
       }
       logConfiguration = {
@@ -215,7 +215,7 @@ resource "aws_ecs_task_definition" "subscription_service" {
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
   execution_role_arn       = var.ecs_execution_role_arn
-  task_role_arn           = var.ecs_task_role_arn
+  task_role_arn            = var.ecs_task_role_arn
 
   container_definitions = jsonencode([
     {
@@ -246,10 +246,10 @@ resource "aws_ecs_task_definition" "subscription_service" {
       ]
 
       healthCheck = {
-        command = ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
-        interval = 30
-        timeout = 10
-        retries = 3
+        command     = ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+        interval    = 30
+        timeout     = 10
+        retries     = 3
         startPeriod = 60
       }
       logConfiguration = {
@@ -271,7 +271,7 @@ resource "aws_ecs_task_definition" "support_service" {
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
   execution_role_arn       = var.ecs_execution_role_arn
-  task_role_arn           = var.ecs_task_role_arn
+  task_role_arn            = var.ecs_task_role_arn
 
   container_definitions = jsonencode([
     {
@@ -310,10 +310,10 @@ resource "aws_ecs_task_definition" "support_service" {
       ]
 
       healthCheck = {
-        command = ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
-        interval = 30
-        timeout = 10
-        retries = 3
+        command     = ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
+        interval    = 30
+        timeout     = 10
+        retries     = 3
         startPeriod = 60
       }
       logConfiguration = {

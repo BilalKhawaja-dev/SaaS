@@ -21,18 +21,18 @@ resource "aws_cognito_user_pool" "main" {
   # Standard attributes
   schema {
     attribute_data_type = "String"
-    name               = "email"
-    required           = true
-    mutable            = true
+    name                = "email"
+    required            = true
+    mutable             = true
   }
 
   # Custom attributes for tenant information
   schema {
     attribute_data_type = "String"
-    name               = "tenant_id"
-    required           = false
-    mutable            = true
-    
+    name                = "tenant_id"
+    required            = false
+    mutable             = true
+
     string_attribute_constraints {
       min_length = 1
       max_length = 256
@@ -41,10 +41,10 @@ resource "aws_cognito_user_pool" "main" {
 
   schema {
     attribute_data_type = "String"
-    name               = "company_name"
-    required           = false
-    mutable            = true
-    
+    name                = "company_name"
+    required            = false
+    mutable             = true
+
     string_attribute_constraints {
       min_length = 1
       max_length = 256
@@ -85,7 +85,7 @@ resource "aws_cognito_user_pool_client" "main" {
   user_pool_id = aws_cognito_user_pool.main.id
 
   generate_secret = false
-  
+
   explicit_auth_flows = [
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
@@ -93,26 +93,26 @@ resource "aws_cognito_user_pool_client" "main" {
   ]
 
   supported_identity_providers = ["COGNITO"]
-  
+
   callback_urls = [
     "https://example.com/callback",
-    "http://localhost:3000/callback"  # For local development
+    "http://localhost:3000/callback" # For local development
   ]
-  
+
   logout_urls = [
     "https://example.com/logout",
-    "http://localhost:3000/logout"   # For local development
+    "http://localhost:3000/logout" # For local development
   ]
-  
-  allowed_oauth_flows = ["code", "implicit"]
-  allowed_oauth_scopes = ["email", "openid", "profile"]
+
+  allowed_oauth_flows                  = ["code", "implicit"]
+  allowed_oauth_scopes                 = ["email", "openid", "profile"]
   allowed_oauth_flows_user_pool_client = true
-  
+
   # Token validity
-  access_token_validity  = 60    # 1 hour
-  id_token_validity     = 60    # 1 hour
-  refresh_token_validity = 30   # 30 days
-  
+  access_token_validity  = 60 # 1 hour
+  id_token_validity      = 60 # 1 hour
+  refresh_token_validity = 30 # 30 days
+
   token_validity_units {
     access_token  = "minutes"
     id_token      = "minutes"
@@ -173,20 +173,20 @@ resource "random_password" "readonly_password" {
 # Demo Users matching database demo data
 resource "aws_cognito_user" "admin_user" {
   count = var.create_demo_users ? 1 : 0
-  
+
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "admin@democorp.com"
-  password     = "AdminDemo123!"  # Fixed password for demo (12+ chars)
-  
+  password     = "AdminDemo123!" # Fixed password for demo (12+ chars)
+
   attributes = {
-    email                    = "admin@democorp.com"
-    email_verified          = "true"
-    "custom:tenant_id"      = "550e8400-e29b-41d4-a716-446655440001"
-    "custom:company_name"   = "Demo Corp"
+    email                 = "admin@democorp.com"
+    email_verified        = "true"
+    "custom:tenant_id"    = "550e8400-e29b-41d4-a716-446655440001"
+    "custom:company_name" = "Demo Corp"
   }
-  
+
   message_action = "SUPPRESS"
-  
+
   lifecycle {
     ignore_changes = [password, attributes]
   }
@@ -194,20 +194,20 @@ resource "aws_cognito_user" "admin_user" {
 
 resource "aws_cognito_user" "regular_user" {
   count = var.create_demo_users ? 1 : 0
-  
+
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "user@testinc.com"
-  password     = "UserDemo123!"   # Fixed password for demo (12+ chars)
-  
+  password     = "UserDemo123!" # Fixed password for demo (12+ chars)
+
   attributes = {
-    email                    = "user@testinc.com"
-    email_verified          = "true"
-    "custom:tenant_id"      = "550e8400-e29b-41d4-a716-446655440002"
-    "custom:company_name"   = "Test Inc"
+    email                 = "user@testinc.com"
+    email_verified        = "true"
+    "custom:tenant_id"    = "550e8400-e29b-41d4-a716-446655440002"
+    "custom:company_name" = "Test Inc"
   }
-  
+
   message_action = "SUPPRESS"
-  
+
   lifecycle {
     ignore_changes = [password, attributes]
   }
@@ -215,20 +215,20 @@ resource "aws_cognito_user" "regular_user" {
 
 resource "aws_cognito_user" "readonly_user" {
   count = var.create_demo_users ? 1 : 0
-  
+
   user_pool_id = aws_cognito_user_pool.main.id
   username     = "readonly@enterpriseltd.com"
-  password     = "ReadonlyDemo123!"  # Fixed password for demo (12+ chars)
-  
+  password     = "ReadonlyDemo123!" # Fixed password for demo (12+ chars)
+
   attributes = {
-    email                    = "readonly@enterpriseltd.com"
-    email_verified          = "true"
-    "custom:tenant_id"      = "550e8400-e29b-41d4-a716-446655440003"
-    "custom:company_name"   = "Enterprise Ltd"
+    email                 = "readonly@enterpriseltd.com"
+    email_verified        = "true"
+    "custom:tenant_id"    = "550e8400-e29b-41d4-a716-446655440003"
+    "custom:company_name" = "Enterprise Ltd"
   }
-  
+
   message_action = "SUPPRESS"
-  
+
   lifecycle {
     ignore_changes = [password, attributes]
   }
@@ -237,7 +237,7 @@ resource "aws_cognito_user" "readonly_user" {
 # User Group Memberships
 resource "aws_cognito_user_in_group" "admin_membership" {
   count = var.create_demo_users ? 1 : 0
-  
+
   user_pool_id = aws_cognito_user_pool.main.id
   group_name   = aws_cognito_user_group.admin.name
   username     = aws_cognito_user.admin_user[0].username
@@ -245,7 +245,7 @@ resource "aws_cognito_user_in_group" "admin_membership" {
 
 resource "aws_cognito_user_in_group" "user_membership" {
   count = var.create_demo_users ? 1 : 0
-  
+
   user_pool_id = aws_cognito_user_pool.main.id
   group_name   = aws_cognito_user_group.user.name
   username     = aws_cognito_user.regular_user[0].username
@@ -253,7 +253,7 @@ resource "aws_cognito_user_in_group" "user_membership" {
 
 resource "aws_cognito_user_in_group" "readonly_membership" {
   count = var.create_demo_users ? 1 : 0
-  
+
   user_pool_id = aws_cognito_user_pool.main.id
   group_name   = aws_cognito_user_group.readonly.name
   username     = aws_cognito_user.readonly_user[0].username
@@ -261,12 +261,12 @@ resource "aws_cognito_user_in_group" "readonly_membership" {
 
 # Lambda function for token customization
 resource "aws_lambda_function" "token_customizer" {
-  filename         = "${path.module}/token_customizer.zip"
-  function_name    = "${var.project_name}-token-customizer"
-  role            = aws_iam_role.token_customizer_role.arn
-  handler         = "token_customizer.handler"
-  runtime         = "python3.11"
-  timeout         = 30
+  filename      = "${path.module}/token_customizer.zip"
+  function_name = "${var.project_name}-token-customizer"
+  role          = aws_iam_role.token_customizer_role.arn
+  handler       = "token_customizer.handler"
+  runtime       = "python3.11"
+  timeout       = 30
 
   tags = var.tags
 }

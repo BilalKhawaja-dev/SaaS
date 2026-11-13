@@ -13,9 +13,9 @@ resource "aws_lb" "nlb" {
 # Target Groups for each service
 resource "aws_lb_target_group" "frontend" {
   name_prefix = "fe-"
-  port     = 5002
-  protocol = "TCP"
-  vpc_id   = var.vpc_id
+  port        = 5002
+  protocol    = "TCP"
+  vpc_id      = var.vpc_id
   target_type = "instance"
 
   health_check {
@@ -37,9 +37,9 @@ resource "aws_lb_target_group" "frontend" {
 
 resource "aws_lb_target_group" "subscription" {
   name_prefix = "sub-"
-  port     = 5000
-  protocol = "TCP"
-  vpc_id   = var.vpc_id
+  port        = 5000
+  protocol    = "TCP"
+  vpc_id      = var.vpc_id
   target_type = "instance"
 
   health_check {
@@ -63,9 +63,9 @@ resource "aws_lb_target_group" "subscription" {
 
 resource "aws_lb_target_group" "support" {
   name_prefix = "sup-"
-  port     = 5001
-  protocol = "TCP"
-  vpc_id   = var.vpc_id
+  port        = 5001
+  protocol    = "TCP"
+  vpc_id      = var.vpc_id
   target_type = "instance"
 
   health_check {
@@ -143,12 +143,12 @@ resource "aws_api_gateway_rest_api" "main" {
 
 # Lambda Authorizer Function
 resource "aws_lambda_function" "authorizer" {
-  filename         = "${path.module}/authorizer.zip"
-  function_name    = "${var.project_name}-authorizer"
-  role            = var.lambda_execution_role_arn
-  handler         = "authorizer.handler"
-  runtime         = "python3.11"
-  timeout         = 30
+  filename      = "${path.module}/authorizer.zip"
+  function_name = "${var.project_name}-authorizer"
+  role          = var.lambda_execution_role_arn
+  handler       = "authorizer.handler"
+  runtime       = "python3.11"
+  timeout       = 30
 
   environment {
     variables = {
@@ -164,10 +164,10 @@ resource "aws_lambda_function" "authorizer" {
 # API Gateway REQUEST Authorizer
 resource "aws_api_gateway_authorizer" "lambda" {
   name                   = "${var.project_name}-lambda-authorizer"
-  rest_api_id           = aws_api_gateway_rest_api.main.id
-  type                  = "REQUEST"
-  authorizer_uri        = aws_lambda_function.authorizer.invoke_arn
-  identity_source       = "method.request.header.Authorization"
+  rest_api_id            = aws_api_gateway_rest_api.main.id
+  type                   = "REQUEST"
+  authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
+  identity_source        = "method.request.header.Authorization"
   authorizer_credentials = var.lambda_execution_role_arn
 }
 
@@ -310,7 +310,7 @@ resource "aws_api_gateway_method" "subscription_any" {
   authorizer_id = aws_api_gateway_authorizer.lambda.id
 
   request_parameters = {
-    "method.request.path.proxy" = true
+    "method.request.path.proxy"           = true
     "method.request.header.Authorization" = true
   }
 }
@@ -345,7 +345,7 @@ resource "aws_api_gateway_method" "support_any" {
   authorizer_id = aws_api_gateway_authorizer.lambda.id
 
   request_parameters = {
-    "method.request.path.proxy" = true
+    "method.request.path.proxy"           = true
     "method.request.header.Authorization" = true
   }
 }

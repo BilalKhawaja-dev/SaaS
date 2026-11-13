@@ -198,7 +198,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_errors" {
   statistic           = "Sum"
   threshold           = "10"
   alarm_description   = "This metric monitors API Gateway 4XX errors"
-  
+
   dimensions = {
     ApiName = "${var.project_name}-api"
   }
@@ -216,7 +216,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
   statistic           = "Sum"
   threshold           = "5"
   alarm_description   = "This metric monitors API Gateway 5XX errors"
-  
+
   dimensions = {
     ApiName = "${var.project_name}-api"
   }
@@ -232,9 +232,9 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_latency" {
   namespace           = "AWS/ApiGateway"
   period              = "300"
   statistic           = "Average"
-  threshold           = "5000"  # 5 seconds
+  threshold           = "5000" # 5 seconds
   alarm_description   = "This metric monitors API Gateway latency"
-  
+
   dimensions = {
     ApiName = "${var.project_name}-api"
   }
@@ -253,7 +253,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_errors" {
   statistic           = "Sum"
   threshold           = "5"
   alarm_description   = "This metric monitors Lambda authorizer errors"
-  
+
   dimensions = {
     FunctionName = "${var.project_name}-authorizer"
   }
@@ -269,9 +269,9 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_duration" {
   namespace           = "AWS/Lambda"
   period              = "300"
   statistic           = "Average"
-  threshold           = "10000"  # 10 seconds
+  threshold           = "10000" # 10 seconds
   alarm_description   = "This metric monitors Lambda authorizer duration"
-  
+
   dimensions = {
     FunctionName = "${var.project_name}-authorizer"
   }
@@ -290,7 +290,7 @@ resource "aws_cloudwatch_metric_alarm" "valkey_cpu_high" {
   statistic           = "Average"
   threshold           = "80"
   alarm_description   = "This metric monitors Valkey CPU utilization"
-  
+
   dimensions = {
     CacheClusterId = "${var.project_name}-cache-001"
   }
@@ -308,7 +308,7 @@ resource "aws_cloudwatch_metric_alarm" "dax_cpu_high" {
   statistic           = "Average"
   threshold           = "80"
   alarm_description   = "This metric monitors DAX CPU utilization"
-  
+
   dimensions = {
     ClusterName = "${var.project_name}-dax-cluster"
   }

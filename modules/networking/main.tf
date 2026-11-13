@@ -21,7 +21,7 @@ resource "aws_internet_gateway" "main" {
 # Public Subnets
 resource "aws_subnet" "public" {
   count = length(var.availability_zones)
-  
+
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = var.availability_zones[count.index]
@@ -37,7 +37,7 @@ resource "aws_subnet" "public" {
 # Private Subnets
 resource "aws_subnet" "private" {
   count = length(var.availability_zones)
-  
+
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = var.availability_zones[count.index]
@@ -66,7 +66,7 @@ resource "aws_route_table" "public" {
 # Route Table Associations for Public Subnets
 resource "aws_route_table_association" "public" {
   count = length(var.availability_zones)
-  
+
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
@@ -75,11 +75,11 @@ resource "aws_route_table_association" "public" {
 resource "aws_eip" "nat" {
   count  = length(var.availability_zones)
   domain = "vpc"
-  
+
   tags = merge(var.tags, {
     Name = "${var.project_name}-nat-eip-${count.index + 1}"
   })
-  
+
   depends_on = [aws_internet_gateway.main]
 }
 
@@ -114,7 +114,7 @@ resource "aws_route_table" "private" {
 # Route Table Associations for Private Subnets
 resource "aws_route_table_association" "private" {
   count = length(var.availability_zones)
-  
+
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private[count.index].id
 }
@@ -125,7 +125,7 @@ resource "aws_vpc_endpoint" "s3" {
   service_name      = "com.amazonaws.${var.region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = concat([aws_route_table.public.id], aws_route_table.private[*].id)
-  
+
   tags = merge(var.tags, {
     Name = "${var.project_name}-s3-endpoint"
   })
@@ -136,7 +136,7 @@ resource "aws_vpc_endpoint" "dynamodb" {
   service_name      = "com.amazonaws.${var.region}.dynamodb"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = concat([aws_route_table.public.id], aws_route_table.private[*].id)
-  
+
   tags = merge(var.tags, {
     Name = "${var.project_name}-dynamodb-endpoint"
   })

@@ -188,14 +188,14 @@ resource "random_password" "jwt_secret" {
 
 # Store JWT secret in Secrets Manager
 resource "aws_secretsmanager_secret" "jwt_secret" {
-  name = "${var.project_name}/jwt/secret${var.deployment_id != "" ? "-${var.deployment_id}" : ""}-${formatdate("YYYYMMDD-hhmm", timestamp())}"
-  description = "JWT secret key for token validation"
+  name                    = "${var.project_name}/jwt/secret${var.deployment_id != "" ? "-${var.deployment_id}" : ""}-${formatdate("YYYYMMDD-hhmm", timestamp())}"
+  description             = "JWT secret key for token validation"
   recovery_window_in_days = 0
-  tags = var.tags
+  tags                    = var.tags
 }
 
 resource "aws_secretsmanager_secret_version" "jwt_secret" {
-  secret_id     = aws_secretsmanager_secret.jwt_secret.id
+  secret_id = aws_secretsmanager_secret.jwt_secret.id
   secret_string = jsonencode({
     jwt_secret_key = random_password.jwt_secret.result
   })

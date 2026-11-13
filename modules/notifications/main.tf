@@ -3,7 +3,7 @@
 # Main SNS topic for all support tickets
 resource "aws_sns_topic" "support_tickets" {
   name = "${var.project_name}-support-tickets"
-  
+
   tags = {
     Name        = "${var.project_name}-support-tickets"
     Environment = var.environment
@@ -14,7 +14,7 @@ resource "aws_sns_topic" "support_tickets" {
 # Urgent tickets topic (routes to your email)
 resource "aws_sns_topic" "urgent_tickets" {
   name = "${var.project_name}-urgent-tickets"
-  
+
   tags = {
     Name        = "${var.project_name}-urgent-tickets"
     Environment = var.environment
@@ -25,7 +25,7 @@ resource "aws_sns_topic" "urgent_tickets" {
 # Password reset tickets topic
 resource "aws_sns_topic" "password_reset_tickets" {
   name = "${var.project_name}-password-reset-tickets"
-  
+
   tags = {
     Name        = "${var.project_name}-password-reset-tickets"
     Environment = var.environment
@@ -36,7 +36,7 @@ resource "aws_sns_topic" "password_reset_tickets" {
 # Billing tickets topic
 resource "aws_sns_topic" "billing_tickets" {
   name = "${var.project_name}-billing-tickets"
-  
+
   tags = {
     Name        = "${var.project_name}-billing-tickets"
     Environment = var.environment
@@ -47,7 +47,7 @@ resource "aws_sns_topic" "billing_tickets" {
 # Technical support tickets topic
 resource "aws_sns_topic" "technical_tickets" {
   name = "${var.project_name}-technical-tickets"
-  
+
   tags = {
     Name        = "${var.project_name}-technical-tickets"
     Environment = var.environment
@@ -58,7 +58,7 @@ resource "aws_sns_topic" "technical_tickets" {
 # General support tickets topic
 resource "aws_sns_topic" "general_tickets" {
   name = "${var.project_name}-general-tickets"
-  
+
   tags = {
     Name        = "${var.project_name}-general-tickets"
     Environment = var.environment
@@ -151,20 +151,20 @@ resource "aws_iam_role_policy" "ticket_router_lambda_policy" {
 
 # Lambda function for intelligent ticket routing
 resource "aws_lambda_function" "ticket_router" {
-  filename         = "${path.module}/ticket_router.zip"
-  function_name    = "${var.project_name}-ticket-router"
-  role            = aws_iam_role.ticket_router_lambda_role.arn
-  handler         = "ticket_router.lambda_handler"
-  runtime         = "python3.11"
-  timeout         = 30
+  filename      = "${path.module}/ticket_router.zip"
+  function_name = "${var.project_name}-ticket-router"
+  role          = aws_iam_role.ticket_router_lambda_role.arn
+  handler       = "ticket_router.lambda_handler"
+  runtime       = "python3.11"
+  timeout       = 30
 
   environment {
     variables = {
-      URGENT_TOPIC_ARN = aws_sns_topic.urgent_tickets.arn
+      URGENT_TOPIC_ARN         = aws_sns_topic.urgent_tickets.arn
       PASSWORD_RESET_TOPIC_ARN = aws_sns_topic.password_reset_tickets.arn
-      BILLING_TOPIC_ARN = aws_sns_topic.billing_tickets.arn
-      TECHNICAL_TOPIC_ARN = aws_sns_topic.technical_tickets.arn
-      GENERAL_TOPIC_ARN = aws_sns_topic.general_tickets.arn
+      BILLING_TOPIC_ARN        = aws_sns_topic.billing_tickets.arn
+      TECHNICAL_TOPIC_ARN      = aws_sns_topic.technical_tickets.arn
+      GENERAL_TOPIC_ARN        = aws_sns_topic.general_tickets.arn
     }
   }
 

@@ -1,19 +1,19 @@
 # Generate random password (exclude RDS invalid characters: /, @, ", space)
 resource "random_password" "db_password" {
-  length  = 16
-  special = true
+  length           = 16
+  special          = true
   override_special = "!#$%&*()_+-=[]{}|;:,.<>?"
 }
 
 # Store password in Secrets Manager
 resource "aws_secretsmanager_secret" "db_password" {
-  name = "${var.project_name}/database/password${var.deployment_id != "" ? "-${var.deployment_id}" : ""}-${formatdate("YYYYMMDD-hhmm", timestamp())}"
+  name                    = "${var.project_name}/database/password${var.deployment_id != "" ? "-${var.deployment_id}" : ""}-${formatdate("YYYYMMDD-hhmm", timestamp())}"
   recovery_window_in_days = 0
-  tags = var.tags
+  tags                    = var.tags
 }
 
 resource "aws_secretsmanager_secret_version" "db_password" {
-  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_id = aws_secretsmanager_secret.db_password.id
   secret_string = jsonencode({
     username = var.db_username
     password = random_password.db_password.result
@@ -54,32 +54,32 @@ resource "aws_db_subnet_group" "main" {
 
 # Aurora Serverless v2 Cluster
 resource "aws_rds_cluster" "main" {
-  cluster_identifier     = "${var.project_name}-aurora"
-  engine                = "aurora-postgresql"
-  engine_mode           = "provisioned"
-  engine_version        = "15.4"
-  database_name         = "saasdb"
-  master_username       = var.db_username
-  master_password       = random_password.db_password.result
-  
+  cluster_identifier = "${var.project_name}-aurora"
+  engine             = "aurora-postgresql"
+  engine_mode        = "provisioned"
+  engine_version     = "15.4"
+  database_name      = "saasdb"
+  master_username    = var.db_username
+  master_password    = random_password.db_password.result
+
   vpc_security_group_ids = [var.rds_security_group_id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
-  
+
   # Multi-AZ configuration - let AWS choose AZs
-  
-  backup_retention_period = 7
-  preferred_backup_window = "03:00-04:00"
+
+  backup_retention_period      = 7
+  preferred_backup_window      = "03:00-04:00"
   preferred_maintenance_window = "sun:04:00-sun:05:00"
-  
-  storage_encrypted = true
+
+  storage_encrypted   = true
   skip_final_snapshot = true
   deletion_protection = false
-  
+
   serverlessv2_scaling_configuration {
     max_capacity = 1
     min_capacity = 0.5
   }
-  
+
   tags = merge(var.tags, {
     Name = "${var.project_name}-aurora"
   })
@@ -87,15 +87,15 @@ resource "aws_rds_cluster" "main" {
 
 # Aurora Serverless v2 Instances (Multi-AZ)
 resource "aws_rds_cluster_instance" "main" {
-  count = 2  # One instance per AZ
-  
+  count = 2 # One instance per AZ
+
   identifier         = "${var.project_name}-db-${count.index + 1}"
   cluster_identifier = aws_rds_cluster.main.id
   instance_class     = "db.serverless"
-  engine            = aws_rds_cluster.main.engine
-  engine_version    = aws_rds_cluster.main.engine_version
+  engine             = aws_rds_cluster.main.engine
+  engine_version     = aws_rds_cluster.main.engine_version
   # Let AWS choose AZ automatically
-  
+
   tags = merge(var.tags, {
     Name = "${var.project_name}-db-${count.index + 1}"
   })
@@ -103,8 +103,8 @@ resource "aws_rds_cluster_instance" "main" {
 
 # RDS Proxy
 resource "aws_db_proxy" "main" {
-  name                   = "${var.project_name}-proxy"
-  engine_family         = "POSTGRESQL"
+  name          = "${var.project_name}-proxy"
+  engine_family = "POSTGRESQL"
   auth {
     auth_scheme = "SECRETS"
     secret_arn  = aws_secretsmanager_secret.db_password.arn
@@ -112,9 +112,9 @@ resource "aws_db_proxy" "main" {
   role_arn               = aws_iam_role.rds_proxy.arn
   vpc_subnet_ids         = var.private_subnet_ids
   vpc_security_group_ids = [var.rds_security_group_id]
-  
 
-  
+
+
   tags = var.tags
 }
 
@@ -139,7 +139,7 @@ resource "aws_db_proxy_target" "main" {
 # RDS Proxy IAM Role
 resource "aws_iam_role" "rds_proxy" {
   name = "${var.project_name}-rds-proxy-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -152,14 +152,14 @@ resource "aws_iam_role" "rds_proxy" {
       }
     ]
   })
-  
+
   tags = var.tags
 }
 
 resource "aws_iam_role_policy" "rds_proxy" {
   name = "${var.project_name}-rds-proxy-policy"
   role = aws_iam_role.rds_proxy.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -177,10 +177,10 @@ resource "aws_iam_role_policy" "rds_proxy" {
 
 # DynamoDB Table for Support Tickets
 resource "aws_dynamodb_table" "support_tickets" {
-  name           = "${var.project_name}-tickets"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "tenant_id"
-  range_key      = "ticket_id"
+  name         = "${var.project_name}-tickets"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "tenant_id"
+  range_key    = "ticket_id"
 
   attribute {
     name = "tenant_id"
@@ -198,9 +198,9 @@ resource "aws_dynamodb_table" "support_tickets" {
   }
 
   global_secondary_index {
-    name               = "status-index"
-    hash_key           = "status"
-    projection_type    = "ALL"
+    name            = "status-index"
+    hash_key        = "status"
+    projection_type = "ALL"
   }
 
   server_side_encryption {
@@ -214,9 +214,9 @@ resource "aws_dynamodb_table" "support_tickets" {
 
 # DynamoDB Table for User Sessions
 resource "aws_dynamodb_table" "user_sessions" {
-  name           = "${var.project_name}-sessions"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "session_id"
+  name         = "${var.project_name}-sessions"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "session_id"
 
   attribute {
     name = "session_id"
@@ -246,13 +246,13 @@ resource "aws_dax_subnet_group" "main" {
 # DAX Cluster
 resource "aws_dax_cluster" "main" {
   cluster_name       = "${var.project_name}-dax"
-  iam_role_arn      = aws_iam_role.dax.arn
-  node_type         = "dax.t3.small"
-  replication_factor = 2  # Multi-AZ with 2 nodes
-  
-  subnet_group_name   = aws_dax_subnet_group.main.name
-  security_group_ids  = [aws_security_group.dax.id]
-  
+  iam_role_arn       = aws_iam_role.dax.arn
+  node_type          = "dax.t3.small"
+  replication_factor = 2 # Multi-AZ with 2 nodes
+
+  subnet_group_name  = aws_dax_subnet_group.main.name
+  security_group_ids = [aws_security_group.dax.id]
+
   tags = var.tags
 }
 
@@ -260,21 +260,21 @@ resource "aws_dax_cluster" "main" {
 resource "aws_security_group" "dax" {
   name_prefix = "${var.project_name}-dax-"
   vpc_id      = var.vpc_id
-  
+
   ingress {
     from_port   = 8111
     to_port     = 8111
     protocol    = "tcp"
     cidr_blocks = ["10.0.0.0/16"]
   }
-  
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = merge(var.tags, {
     Name = "${var.project_name}-dax-sg"
   })
@@ -283,7 +283,7 @@ resource "aws_security_group" "dax" {
 # DAX IAM Role
 resource "aws_iam_role" "dax" {
   name = "${var.project_name}-dax-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -296,7 +296,7 @@ resource "aws_iam_role" "dax" {
       }
     ]
   })
-  
+
   tags = var.tags
 }
 

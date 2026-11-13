@@ -32,3 +32,14 @@ modules/api/authorizer.zip
 
 # Kiro IDE files
 .kiro/
+node_modules/
+*.tfstate.backup
+cdk.out/
+.env.local
+*.zip
+tfplan
+tfplan.out
+*.tfplan
+lambda-package/
+__pycache__/
+*.pyc

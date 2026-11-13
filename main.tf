@@ -21,12 +21,12 @@ module "networking" {
   source = "./modules/networking"
 
   project_name         = var.project_name
-  region              = var.region
-  availability_zones  = var.availability_zones
-  vpc_cidr           = var.vpc_cidr
-  public_subnet_cidrs = var.public_subnet_cidrs
+  region               = var.region
+  availability_zones   = var.availability_zones
+  vpc_cidr             = var.vpc_cidr
+  public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
-  tags               = var.tags
+  tags                 = var.tags
 }
 
 # Security Module
@@ -35,14 +35,14 @@ module "security" {
 
   project_name  = var.project_name
   deployment_id = var.deployment_id
-  tags         = var.tags
+  tags          = var.tags
 }
 
 # Database Module
 module "database" {
   source = "./modules/database"
 
-  project_name           = var.project_name
+  project_name          = var.project_name
   vpc_id                = module.networking.vpc_id
   private_subnet_ids    = module.networking.private_subnet_ids
   rds_security_group_id = module.networking.rds_security_group_id
@@ -56,11 +56,11 @@ module "database" {
 module "cache" {
   source = "./modules/cache"
 
-  project_name                 = var.project_name
-  private_subnet_ids          = module.networking.private_subnet_ids
+  project_name                  = var.project_name
+  private_subnet_ids            = module.networking.private_subnet_ids
   elasticache_security_group_id = module.networking.elasticache_security_group_id
-  elasticache_node_type       = var.elasticache_node_type
-  tags                        = var.tags
+  elasticache_node_type         = var.elasticache_node_type
+  tags                          = var.tags
 }
 
 # Storage Module
@@ -68,7 +68,7 @@ module "storage" {
   source = "./modules/storage"
 
   project_name = var.project_name
-  tags        = var.tags
+  tags         = var.tags
 }
 
 # ECR Module
@@ -76,7 +76,7 @@ module "ecr" {
   source = "./modules/ecr"
 
   project_name = var.project_name
-  tags        = var.tags
+  tags         = var.tags
 }
 
 # Monitoring Module
@@ -84,7 +84,7 @@ module "monitoring" {
   source = "./modules/monitoring"
 
   project_name = var.project_name
-  tags        = var.tags
+  tags         = var.tags
 }
 
 # Notifications Module - Intelligent SNS routing for support tickets
@@ -93,7 +93,7 @@ module "notifications" {
 
   project_name       = var.project_name
   environment        = var.environment
-  vpc_id            = module.networking.vpc_id
+  vpc_id             = module.networking.vpc_id
   private_subnet_ids = module.networking.private_subnet_ids
 
   depends_on = [module.networking]
@@ -105,8 +105,8 @@ module "auth" {
 
   project_name       = var.project_name
   api_gateway_domain = "placeholder.execute-api.${var.region}.amazonaws.com"
-  create_demo_users  = true   # Enable demo users for testing
-  tags              = var.tags
+  create_demo_users  = true # Enable demo users for testing
+  tags               = var.tags
 }
 
 # API Module
@@ -114,12 +114,12 @@ module "api" {
   source = "./modules/api"
 
   project_name              = var.project_name
-  vpc_id                   = module.networking.vpc_id
-  private_subnet_ids       = module.networking.private_subnet_ids
+  vpc_id                    = module.networking.vpc_id
+  private_subnet_ids        = module.networking.private_subnet_ids
   lambda_execution_role_arn = module.security.lambda_execution_role_arn
-  user_pool_id             = module.auth.user_pool_id
-  user_pool_client_id      = module.auth.user_pool_client_id
-  tags                     = var.tags
+  user_pool_id              = module.auth.user_pool_id
+  user_pool_client_id       = module.auth.user_pool_client_id
+  tags                      = var.tags
 
   depends_on = [module.auth, module.security, module.monitoring]
 }
@@ -128,23 +128,23 @@ module "api" {
 module "compute" {
   source = "./modules/compute"
 
-  project_name           = var.project_name
-  vpc_id                = module.networking.vpc_id
-  public_subnet_ids     = module.networking.public_subnet_ids
-  private_subnet_ids    = module.networking.private_subnet_ids
-  ecs_security_group_id = module.networking.ecs_security_group_id
-  ecs_instance_type     = var.ecs_instance_type
-  ecs_task_role_arn     = module.security.ecs_task_role_arn
-  ecs_execution_role_arn = module.security.ecs_execution_role_arn
-  ecs_instance_profile_name = module.security.ecs_instance_profile_name
-  log_group_name        = module.monitoring.app_log_group_name
-  sns_topic_arn         = module.notifications.main_topic_arn
-  nlb_target_group_frontend_arn = module.api.nlb_target_group_frontend_arn
+  project_name                      = var.project_name
+  vpc_id                            = module.networking.vpc_id
+  public_subnet_ids                 = module.networking.public_subnet_ids
+  private_subnet_ids                = module.networking.private_subnet_ids
+  ecs_security_group_id             = module.networking.ecs_security_group_id
+  ecs_instance_type                 = var.ecs_instance_type
+  ecs_task_role_arn                 = module.security.ecs_task_role_arn
+  ecs_execution_role_arn            = module.security.ecs_execution_role_arn
+  ecs_instance_profile_name         = module.security.ecs_instance_profile_name
+  log_group_name                    = module.monitoring.app_log_group_name
+  sns_topic_arn                     = module.notifications.main_topic_arn
+  nlb_target_group_frontend_arn     = module.api.nlb_target_group_frontend_arn
   nlb_target_group_subscription_arn = module.api.nlb_target_group_subscription_arn
-  nlb_target_group_support_arn = module.api.nlb_target_group_support_arn
-  user_pool_id          = module.auth.user_pool_id
-  user_pool_client_id   = module.auth.user_pool_client_id
-  tags                  = var.tags
+  nlb_target_group_support_arn      = module.api.nlb_target_group_support_arn
+  user_pool_id                      = module.auth.user_pool_id
+  user_pool_client_id               = module.auth.user_pool_client_id
+  tags                              = var.tags
 
   depends_on = [module.api]
 }
@@ -155,10 +155,10 @@ module "compute" {
 module "cicd" {
   source = "./modules/cicd"
 
-  project_name         = var.project_name
-  source_bucket_name   = module.storage.assets_bucket_name
+  project_name          = var.project_name
+  source_bucket_name    = module.storage.assets_bucket_name
   artifacts_bucket_name = module.storage.logs_bucket_name
-  tags                = var.tags
+  tags                  = var.tags
 }
 
 # Security Compliance Module - Disabled due to syntax errors

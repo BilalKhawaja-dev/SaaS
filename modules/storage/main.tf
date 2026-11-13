@@ -69,20 +69,20 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "analytics" {
 # Macie Configuration
 resource "aws_macie2_account" "main" {
   finding_publishing_frequency = "FIFTEEN_MINUTES"
-  status                      = "ENABLED"
+  status                       = "ENABLED"
 }
 
 resource "aws_macie2_classification_job" "logs" {
   job_type = "ONE_TIME"
   name     = "${var.project_name}-logs-classification"
-  
+
   s3_job_definition {
     bucket_definitions {
       account_id = data.aws_caller_identity.current.account_id
       buckets    = [aws_s3_bucket.logs.bucket]
     }
   }
-  
+
   depends_on = [aws_macie2_account.main]
   tags       = var.tags
 }
@@ -90,14 +90,14 @@ resource "aws_macie2_classification_job" "logs" {
 resource "aws_macie2_classification_job" "analytics" {
   job_type = "ONE_TIME"
   name     = "${var.project_name}-analytics-classification"
-  
+
   s3_job_definition {
     bucket_definitions {
       account_id = data.aws_caller_identity.current.account_id
       buckets    = [aws_s3_bucket.analytics.bucket]
     }
   }
-  
+
   depends_on = [aws_macie2_account.main]
   tags       = var.tags
 }
@@ -105,20 +105,20 @@ resource "aws_macie2_classification_job" "analytics" {
 # Athena Workgroup
 resource "aws_athena_workgroup" "main" {
   name = "${var.project_name}-workgroup"
-  
+
   configuration {
     enforce_workgroup_configuration    = true
     publish_cloudwatch_metrics_enabled = true
-    
+
     result_configuration {
       output_location = "s3://${aws_s3_bucket.analytics.bucket}/athena-results/"
-      
+
       encryption_configuration {
         encryption_option = "SSE_S3"
       }
     }
   }
-  
+
   tags = var.tags
 }
 

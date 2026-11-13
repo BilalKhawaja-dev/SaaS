@@ -30,9 +30,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
 
 # DynamoDB Table for State Locking
 resource "aws_dynamodb_table" "terraform_locks" {
-  name           = "${var.project_name}-terraform-locks"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
+  name         = "${var.project_name}-terraform-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
 
   attribute {
     name = "LockID"
@@ -46,25 +46,25 @@ resource "aws_dynamodb_table" "terraform_locks" {
 
 # CodeBuild Project
 resource "aws_codebuild_project" "terraform" {
-  name          = "${var.project_name}-terraform-build"
-  description   = "Terraform CI/CD pipeline"
-  service_role  = aws_iam_role.codebuild.arn
+  name         = "${var.project_name}-terraform-build"
+  description  = "Terraform CI/CD pipeline"
+  service_role = aws_iam_role.codebuild.arn
 
   artifacts {
-    type = "S3"
+    type     = "S3"
     location = var.artifacts_bucket_name
   }
 
   environment {
     compute_type                = "BUILD_GENERAL1_SMALL"
-    image                      = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
-    type                       = "LINUX_CONTAINER"
+    image                       = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
+    type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
   }
 
   source {
-    type = "S3"
-    location = "${var.source_bucket_name}/source.zip"
+    type      = "S3"
+    location  = "${var.source_bucket_name}/source.zip"
     buildspec = "buildspec.yml"
   }
 
